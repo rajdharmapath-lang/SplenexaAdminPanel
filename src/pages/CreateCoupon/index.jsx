@@ -230,31 +230,8 @@ function CreateCouponPage() {
                         *
                       </s>
                     </label>
-                    <div className="sl" style={{ height: "36px", padding: "0 8px" }}>
-                      <div className="tags">
-                        <span className="tg2">
-                          FMGE Full Course
-                          {" "}
-                          <i className="bi bi-x-lg"></i>
-                        </span>
-                        <span className="tg2">
-                          Test Series
-                          {" "}
-                          <i className="bi bi-x-lg"></i>
-                        </span>
-                        <span className="tg2">
-                          Study Material
-                          {" "}
-                          <i className="bi bi-x-lg"></i>
-                        </span>
-                        <span className="tg2">
-                          Live Classes
-                          {" "}
-                          <i className="bi bi-x-lg"></i>
-                        </span>
-                      </div>
-                      <i className="bi bi-chevron-down"></i>
-                    </div>
+                    <select className="course-plan-select" id="coupon-products" multiple required size="3" aria-label="Applicable Products"></select>
+                    <div className="help">Choose one or more course plans. Hold Ctrl/Cmd to select multiple.</div>
                   </div>
                   <div>
                     <label className="f">

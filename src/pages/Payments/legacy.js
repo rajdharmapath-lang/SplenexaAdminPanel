@@ -1,6 +1,8 @@
 // Behaviour carried over unchanged from the original HTML page.
 // Runs once after the JSX markup mounts; `document`, `window`, `parent` and timers are
 // scoped shims provided by useLegacyScript (see src/legacy/useLegacyScript.js).
+import { COURSE_PLANS_STORAGE_KEY, DEFAULT_COURSE_PLANS, readCoursePlans } from '../../coursePlans';
+
 export default function init(document, window, parent, setTimeout, setInterval) {
 const DAY_MS = 86400000;
     const subjects = [
@@ -14,14 +16,9 @@ const DAY_MS = 86400000;
       { id: "image-based-test", name: "Image Based", validity: 365, activation: "After payment verification", status: "Active" },
       { id: "video-library", name: "Video", validity: 365, activation: "After payment verification", status: "Active" }
     ];
-    const plans = [
-      { id: "plan-a", name: "PLAN A", productIds: ["image-based-test", "video-library"], baseFee: 0, discount: 0, validity: 365, paymentMode: "One-time", activation: "After payment verification", status: "Draft" },
-      { id: "plan-b", name: "PLAN B", productIds: ["pdf-library", "video-library"], baseFee: 0, discount: 0, validity: 365, paymentMode: "One-time", activation: "After payment verification", status: "Draft" },
-      { id: "plan-c", name: "PLAN C", productIds: ["pdf-library", "image-based-test"], baseFee: 0, discount: 0, validity: 365, paymentMode: "One-time", activation: "After payment verification", status: "Draft" }
-    ];
+    const plans = DEFAULT_COURSE_PLANS.map(plan => ({ ...plan, productIds: [...plan.productIds] }));
     try {
-      const savedPlans = JSON.parse(window.sessionStorage.getItem("fmge-payment-plans") || "null");
-      if (Array.isArray(savedPlans)) plans.splice(0, plans.length, ...savedPlans);
+      plans.splice(0, plans.length, ...readCoursePlans(window.sessionStorage));
     } catch (error) {
       console.error("Could not load saved fee plans.", error);
     }
@@ -97,7 +94,13 @@ const DAY_MS = 86400000;
       return `₹${Number(value || 0).toLocaleString("en-IN", { minimumFractionDigits: decimals, maximumFractionDigits: decimals })}`;
     }
     function statusClass(status) { return String(status).toLowerCase().replace(/\s+/g, "-"); }
-    function finalFee(product) { return Math.round(product.baseFee * (1 - product.discount / 100)); }
+    function pricingOptionsFor(plan) {
+      const options = Array.isArray(plan.pricingOptions)
+        ? plan.pricingOptions.filter(option => Number.isInteger(Number(option.months)) && Number(option.months) > 0 && Number.isFinite(Number(option.price)) && Number(option.price) >= 0)
+        : [];
+      if (options.length) return [...options].sort((a, b) => Number(a.months) - Number(b.months));
+      return [{ months: Math.max(1, Math.round(Number(plan.validity || 90) / 30)), price: Math.max(0, Number(plan.baseFee) || 0) }];
+    }
     function productValidity() { return 365; }
     function productIcon(product) {
       const icons = {
@@ -180,7 +183,7 @@ const DAY_MS = 86400000;
     function getPlan(planId) { return plans.find(plan => plan.id === planId); }
     function persistPlans() {
       try {
-        window.sessionStorage.setItem("fmge-payment-plans", JSON.stringify(plans));
+        window.sessionStorage.setItem(COURSE_PLANS_STORAGE_KEY, JSON.stringify(plans));
         return true;
       } catch (error) {
         console.error("Could not persist fee plan changes.", error);
@@ -214,11 +217,12 @@ const DAY_MS = 86400000;
     function renderFees() {
       const query = document.getElementById("global-search").value.trim().toLowerCase();
       const visiblePlans = plans.filter(plan => {
-        const searchable = `${plan.name} ${plan.productIds.map(id => getProduct(id)?.name || "").join(" ")}`.toLowerCase();
+        const searchable = `${plan.name} ${plan.description || ""} ${plan.productIds.map(id => getProduct(id)?.name || "").join(" ")}`.toLowerCase();
         return !query || searchable.includes(query);
       });
       document.getElementById("fee-rows").innerHTML = visiblePlans.length ? visiblePlans.map(plan => {
         const includedProducts = plan.productIds.map(id => getProduct(id)).filter(Boolean);
+        const pricingOptions = pricingOptionsFor(plan);
         const productsLabel = includedProducts.length ? `<div class="plan-products-list">${includedProducts.map(product => {
           const includedSubjects = planSubjectsFor(plan, product.id);
           const subjectCount = product.subjects?.length || 0;
@@ -229,10 +233,13 @@ const DAY_MS = 86400000;
           const testLabel = product.fromQuestionBank ? `${includedTests.length} of ${product.tests.length} tests` : "";
           return `<div>${escapeHtml(product.name)}${product.subjects ? `<details class="subject-dropdown"><summary>${subjectLabel}</summary><span>${includedSubjects.map(escapeHtml).join(" · ") || "No subjects selected"}</span></details>` : ""}${product.fromQuestionBank ? `<details class="subject-dropdown"><summary>${escapeHtml(testLabel)}</summary><span>${includedTests.map(test => escapeHtml(test.title)).join(" · ") || "No tests selected"}</span></details>` : ""}</div>`;
         }).join("")}</div>` : "Add products before publishing";
-        const planIsPriced = plan.baseFee > 0;
+        const planIsPriced = pricingOptions.some(option => Number(option.price) > 0);
+        const discount = Number(plan.discount) || 0;
+        const basePrices = planIsPriced ? `<div class="plan-price-list">${pricingOptions.map(option => `<span>${option.months} mo · ${formatRupees(option.price)}</span>`).join("")}</div>` : "Not set";
+        const finalPrices = planIsPriced ? `<div class="plan-price-list">${pricingOptions.map(option => `<span>${option.months} mo · ${formatRupees(Math.round(option.price * (1 - discount / 100)))}</span>`).join("")}</div>` : "Not set";
         return `
-        <tr><td><strong>${escapeHtml(plan.name)}</strong></td><td>${productsLabel}</td><td class="money">${planIsPriced ? formatRupees(plan.baseFee) : "Not set"}</td>
-          <td>${planIsPriced ? `${plan.discount}%` : "—"}</td><td class="money"><strong>${planIsPriced ? formatRupees(finalFee(plan)) : "Not set"}</strong></td><td>${plan.validity} days</td>
+        <tr><td><strong>${escapeHtml(plan.name)}</strong>${plan.description ? `<small class="plan-description-cell">${escapeHtml(plan.description)}</small>` : ""}</td><td>${productsLabel}</td><td class="money">${basePrices}</td>
+          <td>${planIsPriced ? `${discount}%` : "—"}</td><td class="money"><strong>${finalPrices}</strong></td><td>${pricingOptions.map(option => `${option.months} mo`).join(" / ")}</td>
           <td>${escapeHtml(plan.paymentMode)}</td><td><span class="status-pill ${statusClass(plan.status)}">${escapeHtml(plan.status)}</span></td>
           <td><div class="fee-actions"><button class="round-action" type="button" data-action="edit-fee" data-id="${plan.id}" aria-label="Edit ${escapeHtml(plan.name)}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m15 5 4 4M4 20l4-.8L19 8a2.1 2.1 0 0 0-3-3L5 16l-1 4Z"/></svg></button><button class="round-action" type="button" data-action="preview-fee" data-id="${plan.id}" aria-label="Preview ${escapeHtml(plan.name)}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg></button><div class="more-wrap"><button class="round-action" type="button" data-action="more-fee" data-id="${plan.id}" aria-label="More actions for ${escapeHtml(plan.name)}" aria-expanded="false"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="12" cy="19" r="1.8"/></svg></button><div class="more-menu" data-fee-menu="${plan.id}" hidden><button type="button" data-action="toggle-fee" data-id="${plan.id}">${plan.status === "Published" ? "Unpublish plan" : "Publish plan"}</button><button type="button" class="danger-action" data-action="delete-fee" data-id="${plan.id}">Delete plan</button></div></div></div></td>
         </tr>`;
@@ -427,6 +434,33 @@ const DAY_MS = 86400000;
         }).join("")
         : '<span class="plan-product-empty">No products added yet.</span>';
     }
+    function renderPricingOptions(options) {
+      const container = document.getElementById("plan-pricing-options");
+      container.innerHTML = options.map((option, index) => `
+        <div class="plan-pricing-row">
+          <label>Duration (months)<input class="form-control" type="number" min="1" step="1" required data-pricing-months value="${escapeHtml(option.months)}"></label>
+          <label>Price (₹)<input class="form-control" type="number" min="0" step="1" required data-pricing-price value="${option.price === "" ? "" : escapeHtml(option.price)}"></label>
+          <button class="button button-secondary" type="button" data-remove-duration="${index}" aria-label="Remove duration row" ${options.length === 1 ? "disabled" : ""}>Remove</button>
+        </div>`).join("");
+      syncPricingFields();
+    }
+    function readPricingOptions() {
+      return Array.from(document.querySelectorAll("#plan-pricing-options .plan-pricing-row")).map(row => ({
+        months: row.querySelector("[data-pricing-months]").value,
+        price: row.querySelector("[data-pricing-price]").value
+      }));
+    }
+    function syncPricingFields() {
+      const firstOption = readPricingOptions()
+        .map(option => ({ months: Number(option.months), price: Number(option.price) }))
+        .filter(option => Number.isInteger(option.months) && option.months > 0)
+        .sort((a, b) => a.months - b.months)[0];
+      const form = document.getElementById("fee-form");
+      const months = firstOption?.months;
+      const price = firstOption?.price;
+      form.elements.baseFee.value = Number.isFinite(price) ? String(price) : "0";
+      form.elements.validity.value = Number.isInteger(months) && months > 0 ? String(months * 30) : "30";
+    }
     function openFeeForm(plan = null) {
       syncQuestionBankProducts();
       editingPlanId = plan ? plan.id : null;
@@ -434,13 +468,14 @@ const DAY_MS = 86400000;
       form.reset();
       document.getElementById("fee-product").innerHTML = `<option value="">Choose a product to add</option>${products.map(item => `<option value="${escapeHtml(item.id)}" ${item.status === "Inactive" ? "disabled" : ""}>${escapeHtml(item.name)}${item.fromQuestionBank ? " · Question Bank" : ""}${item.status === "Inactive" ? " · Inactive" : ""}</option>`).join("")}`;
       document.getElementById("fee-modal-title").textContent = plan ? "Edit Fee Plan" : "Create Fee Plan";
-      document.getElementById("fee-modal-description").textContent = plan ? "Update the plan name, included products, price, and validity." : "Name the plan, add one or more products, and configure its price and validity.";
+      document.getElementById("fee-modal-description").textContent = plan ? "Update the plan description, included products, and duration-based prices." : "Describe the plan, add included products, and set a price for each duration.";
       document.getElementById("fee-save-button").textContent = plan ? "Save Changes" : "Create Fee Plan";
       if (plan) {
         form.elements.planName.value = plan.name;
-        form.elements.baseFee.value = plan.baseFee;
+        form.elements.description.value = plan.description || "";
+        form.elements.baseFee.value = plan.baseFee || 0;
         form.elements.discount.value = plan.discount;
-        form.elements.validity.value = plan.validity;
+        form.elements.validity.value = plan.validity || 90;
         form.elements.paymentMode.value = plan.paymentMode === "One-time" ? "One-time payment" : plan.paymentMode;
         form.elements.status.value = plan.status;
         selectedPlanProductIds = [...plan.productIds];
@@ -448,15 +483,21 @@ const DAY_MS = 86400000;
         selectedPlanTests = Object.fromEntries(plan.productIds.filter(id => getProduct(id)?.fromQuestionBank).map(id => [id, planTestsFor(plan, id).map(test => test.id)]));
       } else {
         form.elements.planName.value = "";
+        form.elements.description.value = "";
         form.elements.baseFee.value = "0";
         form.elements.discount.value = "0";
-        form.elements.validity.value = "365";
+        form.elements.validity.value = "90";
         form.elements.paymentMode.value = "One-time payment";
         form.elements.status.value = "Draft";
         selectedPlanProductIds = [];
         selectedPlanSubjects = {};
         selectedPlanTests = {};
       }
+      renderPricingOptions(plan ? pricingOptionsFor(plan) : [
+        { months: 3, price: "" },
+        { months: 6, price: "" },
+        { months: 12, price: "" }
+      ]);
       renderPlanProductChips();
       document.getElementById("fee-product").value = "";
       updateFeePreview();
@@ -466,6 +507,7 @@ const DAY_MS = 86400000;
     }
     function updateFeePreview() {
       const form = document.getElementById("fee-form");
+      syncPricingFields();
       const base = Math.max(0, Number(form.elements.baseFee.value) || 0);
       const discount = Math.min(100, Math.max(0, Number(form.elements.discount.value) || 0));
       const discountAmount = base * discount / 100;
@@ -474,22 +516,26 @@ const DAY_MS = 86400000;
       document.getElementById("fee-preview-final").textContent = formatRupees(Math.round(base - discountAmount));
     }
     function previewFeePlan(plan) {
+      const pricingOptions = pricingOptionsFor(plan);
       const details = [
         ["Plan", plan.name],
+        ["Description", plan.description || "—"],
         ["Included products", plan.productIds.map(id => {
           const product = getProduct(id);
           if (!product) return "";
           const tests = planTestsFor(plan, id);
           return `${product.name}${product.fromQuestionBank ? ` (${tests.map(test => test.title).join(", ") || "No tests enabled"})` : ""}`;
         }).filter(Boolean).join(", ") || "No products added"],
+        ["Durations and prices", pricingOptions.map(option => `${option.months} months · ${formatRupees(option.price)}`).join(", ")],
         ["Payment model", plan.paymentMode],
-        ["Validity", `${plan.validity} days`], ["Status", plan.status]
+        ["Discount", `${plan.discount}%`], ["Status", plan.status]
       ];
       document.getElementById("preview-title").textContent = plan.name;
       document.getElementById("fee-preview-details").innerHTML = details.map(([label, value]) => `<div class="detail-item"><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong></div>`).join("");
-      document.getElementById("preview-base").textContent = formatRupees(plan.baseFee, 2);
-      document.getElementById("preview-discount").textContent = `${plan.discount}% · −${formatRupees(plan.baseFee * plan.discount / 100, 2)}`;
-      document.getElementById("preview-final").textContent = formatRupees(finalFee(plan));
+      const firstOption = pricingOptions[0];
+      document.getElementById("preview-base").textContent = formatRupees(firstOption.price, 2);
+      document.getElementById("preview-discount").textContent = `${plan.discount}% · −${formatRupees(firstOption.price * plan.discount / 100, 2)}`;
+      document.getElementById("preview-final").textContent = formatRupees(Math.round(firstOption.price * (1 - plan.discount / 100)));
       document.getElementById("preview-modal").classList.add("is-open");
       document.body.style.overflow = "hidden";
     }
@@ -567,13 +613,40 @@ const DAY_MS = 86400000;
     });
     document.getElementById("fee-form").addEventListener("input", updateFeePreview);
     document.getElementById("fee-form").addEventListener("change", updateFeePreview);
+    document.getElementById("add-plan-duration").addEventListener("click", () => {
+      const options = readPricingOptions();
+      options.push({ months: "", price: "" });
+      renderPricingOptions(options);
+      document.getElementById("plan-pricing-options").lastElementChild.querySelector("[data-pricing-months]").focus();
+    });
+    document.getElementById("plan-pricing-options").addEventListener("click", event => {
+      const button = event.target.closest("[data-remove-duration]");
+      if (!button) return;
+      const options = readPricingOptions();
+      if (options.length <= 1) return;
+      options.splice(Number(button.dataset.removeDuration), 1);
+      renderPricingOptions(options);
+      updateFeePreview();
+    });
     document.getElementById("fee-form").addEventListener("submit", event => {
       event.preventDefault();
       const form = event.currentTarget;
       if (!form.reportValidity()) return;
       const planName = form.elements.planName.value.trim();
+      const pricingOptions = readPricingOptions().map(option => ({
+        months: Number(option.months),
+        price: Number(option.price)
+      })).sort((a, b) => a.months - b.months);
       if (!planName) {
         showToast("Enter a plan name.");
+        return;
+      }
+      if (!pricingOptions.length || pricingOptions.some(option => !Number.isInteger(option.months) || option.months < 1 || !Number.isFinite(option.price) || option.price < 0)) {
+        showToast("Enter a valid duration in months and price for each option.");
+        return;
+      }
+      if (new Set(pricingOptions.map(option => option.months)).size !== pricingOptions.length) {
+        showToast("Each duration must be unique.");
         return;
       }
       const existing = editingPlanId ? getPlan(editingPlanId) : plans.find(item => item.name.toLowerCase() === planName.toLowerCase());
@@ -585,8 +658,8 @@ const DAY_MS = 86400000;
         showToast("Select at least one subject for each subject-based product.");
         return;
       }
-      if (form.elements.status.value === "Published" && Number(form.elements.baseFee.value) <= 0) {
-        showToast("Set a base fee above ₹0 before publishing this plan.");
+      if (form.elements.status.value === "Published" && pricingOptions.some(option => option.price <= 0)) {
+        showToast("Set a price above ₹0 for every duration before publishing this plan.");
         return;
       }
       if (plans.some(item => item.name.toLowerCase() === planName.toLowerCase() && item.id !== editingPlanId)) {
@@ -597,6 +670,7 @@ const DAY_MS = 86400000;
       const plan = existing || { id: `plan-${Date.now()}` };
       Object.assign(plan, {
         name: planName,
+        description: form.elements.description.value.trim(),
         productIds: [...selectedPlanProductIds],
         productSubjects: Object.fromEntries(selectedPlanProductIds
           .filter(id => getProduct(id)?.subjects)
@@ -604,9 +678,10 @@ const DAY_MS = 86400000;
         productTests: Object.fromEntries(selectedPlanProductIds
           .filter(id => getProduct(id)?.fromQuestionBank)
           .map(id => [id, [...(selectedPlanTests[id] || [])]])),
-        baseFee: Number(form.elements.baseFee.value),
+        pricingOptions,
+        baseFee: pricingOptions[0].price,
         discount: Number(form.elements.discount.value) || 0,
-        validity: Number(form.elements.validity.value),
+        validity: pricingOptions[0].months * 30,
         paymentMode: form.elements.paymentMode.value === "One-time payment" ? "One-time" : form.elements.paymentMode.value,
         activation: "After payment verification",
         status: form.elements.status.value
@@ -710,7 +785,7 @@ const DAY_MS = 86400000;
       else if (button.dataset.action === "preview-fee") previewFeePlan(plan);
       else if (button.dataset.action === "toggle-fee") {
         if (plan.status !== "Published" && (!plan.productIds.length || plan.baseFee <= 0)) {
-          showToast("Add products and set a base fee before publishing this plan.");
+          showToast("Add products and set a price above ₹0 for every duration before publishing this plan.");
           return;
         }
         const previousStatus = plan.status;

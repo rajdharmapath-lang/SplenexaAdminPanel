@@ -352,24 +352,12 @@ function UploadPdfPage() {
                   </div>
                   <div className="field">
                     <label className="label" htmlFor="courseAccess">
-                      Course Access *
+                      Course Plans *
                     </label>
                     <select className="control" id="courseAccess" multiple required style={{ width: "100%", height: "100px" }}>
-                      <option>
-                        PLAN A
-                      </option>
-                      <option>
-                        PLAN B
-                      </option>
-                      <option>
-                        PLAN C
-                      </option>
-                      <option>
-                        PDF
-                      </option>
                     </select>
                     <div className="helper">
-                      Hold Ctrl/Cmd to select multiple products.
+                      Choose one or more plans. Hold Ctrl/Cmd to select multiple.
                     </div>
                   </div>
                   <div className="field">

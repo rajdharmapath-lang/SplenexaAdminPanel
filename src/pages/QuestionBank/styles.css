@@ -64,6 +64,10 @@
 .pg-question-bank .product-card:focus-visible{outline:2px solid #3b82f6;outline-offset:3px}
 .pg-question-bank .product-card-head{position:relative;display:flex;align-items:flex-start;justify-content:space-between;gap:18px}
 .pg-question-bank .product-card-info{min-width:0;flex:1}
+.pg-question-bank .product-card-info{display:flex;align-items:center;gap:14px}
+.pg-question-bank .product-card-info>div{min-width:0}
+.pg-question-bank .product-card-icon{width:54px;height:54px;flex:none;display:grid;place-items:center;overflow:hidden;border-radius:15px;background:#eaf4fb;color:#0a2f78;font-size:23px}
+.pg-question-bank .product-card-icon img{width:100%;height:100%;object-fit:cover}
 .pg-question-bank .product-card-info h3{margin:0;color:#0b1f4d;font-size:28px;font-weight:700;line-height:1.2;overflow-wrap:anywhere}
 .pg-question-bank .product-card-info p{margin-top:12px;color:#1b2d5c;font-size:16px;line-height:1.5;overflow-wrap:anywhere}
 .pg-question-bank .product-card-divider{position:relative;margin:20px 0;border:0;border-top:1px solid #e3ebf7}
@@ -104,6 +108,7 @@
 .pg-question-bank .category-card:focus-visible{outline:2px solid #3b82f6;outline-offset:3px}
 .pg-question-bank .category-card-head{position:relative;display:flex;align-items:flex-start;justify-content:space-between;gap:18px}
 .pg-question-bank .category-card-info{min-width:0;flex:1}
+.pg-question-bank .topic-card-icon{width:48px;height:48px;flex:none;display:grid;place-items:center;border-radius:14px;background:#eaf4fb;color:#0a2f78;font-size:20px}
 .pg-question-bank .category-card-info h3{margin:0;color:#0b1f4d;font-size:26px;font-weight:700;line-height:1.2;overflow-wrap:anywhere}
 .pg-question-bank .category-card-info p{margin-top:8px;color:#1b2d5c;font-size:14px;line-height:1.5;overflow-wrap:anywhere}
 .pg-question-bank .category-card-divider{position:relative;margin:18px 0;border:0;border-top:1px solid #e3ebf7}
@@ -170,6 +175,21 @@
 .pg-question-bank .toggle-track:after{position:absolute;top:3px;left:3px;width:13px;height:13px;border-radius:50%;background:#fff;content:"";transition:transform .15s}
 .pg-question-bank .product-active-toggle input:checked+.toggle-track{background:#12b886}
 .pg-question-bank .product-active-toggle input:checked+.toggle-track:after{transform:translateX(15px)}
+.pg-question-bank .product-icon-code-field{display:flex;align-items:center;gap:10px;height:40px;padding:0 12px;border:1px solid #cfe2ef;border-radius:6px;background:#fff;color:#0a2f78}
+.pg-question-bank .product-icon-code-field>i{width:24px;text-align:center;font-size:19px}
+.pg-question-bank .product-icon-code-field input{width:100%;height:100%;border:0;outline:0;font:12px Poppins;color:var(--ink)}
+.pg-question-bank .product-icon-code-help{display:block;margin-top:5px;color:#697a96;font-size:10px}
+.pg-question-bank .product-icon-code-help code{color:#0a2f78}
+.pg-question-bank .product-icon-upload{display:flex;align-items:center;gap:14px;margin-top:18px;padding:13px;border:1px dashed #cbdced;border-radius:10px;background:#f8fbff}
+.pg-question-bank .product-icon-preview{width:58px;height:58px;flex:none;display:grid;place-items:center;overflow:hidden;border-radius:12px;background:#e7f1fb;color:#567299;font-size:23px}
+.pg-question-bank .product-icon-preview img{width:100%;height:100%;object-fit:cover}
+.pg-question-bank .product-icon-controls{display:flex;align-items:center;flex-wrap:wrap;gap:8px}
+.pg-question-bank .product-icon-button,.pg-question-bank .product-icon-remove{height:34px;display:inline-flex;align-items:center;gap:8px;padding:0 12px;border:1px solid #cfe2ef;border-radius:7px;background:#fff;color:#0a2f78;font:600 11px Poppins;cursor:pointer}
+.pg-question-bank .product-icon-button i{font-size:15px}
+.pg-question-bank .product-icon-remove{color:#c53b3b}
+.pg-question-bank .product-icon-controls small{flex-basis:100%;color:#697a96;font-size:10px}
+.pg-question-bank .product-dialog .product-active-toggle{margin-top:13px!important}
+.pg-question-bank .product-dialog .subject-dialog-box{max-height:calc(100vh - 32px);overflow:auto}
 .pg-question-bank .question-dialog{display:none;position:fixed;z-index:6;inset:0;place-items:center;background:#0a2f7840}
 .pg-question-bank .question-dialog.on{display:grid}
 .pg-question-bank .question-dialog-box{width:min(1000px,calc(100% - 32px));max-height:calc(100vh - 28px);overflow:auto;padding:20px 24px;border-radius:10px;background:#fff;box-shadow:0 12px 40px #0a2f7833}

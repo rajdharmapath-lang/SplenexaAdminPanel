@@ -100,6 +100,33 @@ function QuestionBankPage() {
             <span className="toggle-track"></span>
             Organize subjects by topics
           </label>
+          <label htmlFor="product-icon-code">Bootstrap icon code</label>
+          <div className="product-icon-code-field">
+            <i id="product-icon-code-preview" className="bi bi-box-seam-fill" aria-hidden="true"></i>
+            <input id="product-icon-code" placeholder="bi bi-box-seam-fill" autoComplete="off" />
+          </div>
+          <small className="product-icon-code-help">Use a Bootstrap Icons class such as <code>bi bi-book-fill</code>. If blank, the upload or default icon is used.</small>
+          <div className="product-icon-upload">
+            <div className="product-icon-preview" id="product-icon-preview">
+              <i className="bi bi-image"></i>
+            </div>
+            <div className="product-icon-controls">
+              <input id="product-icon-file" type="file" accept="image/png,image/jpeg,image/webp" hidden />
+              <button className="product-icon-button" id="product-icon-upload" type="button">
+                <i className="bi bi-cloud-arrow-up-fill"></i>
+                Upload product icon
+              </button>
+              <button className="product-icon-remove" id="product-icon-remove" type="button" hidden>
+                Remove
+              </button>
+              <small id="product-icon-name">PNG, JPG, or WebP · up to 256 KB</small>
+            </div>
+          </div>
+          <label className="product-active-toggle">
+            <input id="product-icon-enabled" type="checkbox" defaultChecked />
+            <span className="toggle-track"></span>
+            Use custom icon on product card
+          </label>
           <div className="edit-actions">
             <button id="cancel-product" type="button">Cancel</button>
             <button className="save" id="save-product" type="button">Create Product</button>
@@ -114,6 +141,14 @@ function QuestionBankPage() {
           </h3>
           <label id="subject-dialog-label" htmlFor="new-subject-name">Subject Name</label>
           <input id="new-subject-name" placeholder="Enter subject name" />
+          <div className="topic-icon-code-editor" id="topic-icon-code-field" hidden>
+            <label htmlFor="topic-icon-code">Bootstrap icon code</label>
+            <div className="product-icon-code-field">
+              <i id="topic-icon-code-preview" className="bi bi-bookmark-fill" aria-hidden="true"></i>
+              <input id="topic-icon-code" placeholder="bi bi-bookmark-fill" autoComplete="off" />
+            </div>
+            <small className="product-icon-code-help">Example: <code>bi bi-bookmark-fill</code></small>
+          </div>
           <div className="edit-actions">
             <button id="cancel-create-subject" type="button">Cancel</button>
             <button className="save" id="save-create-subject" type="button">Save</button>

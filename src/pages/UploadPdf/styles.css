@@ -16,7 +16,7 @@
 .pg-upload-pdf .nav a:hover{background:#ffffff1a}
 .pg-upload-pdf .nav a.active{color:var(--navy);background:linear-gradient(110deg,#8ce9ee,#aef4df);font-weight:700}
 .pg-upload-pdf .nav-icon{width:18px;text-align:center}
-.pg-upload-pdf .main{margin-left:230px;min-height:100vh}
+.pg-upload-pdf .main{margin-left:0;min-height:100vh;width:100%}
 .pg-upload-pdf .topbar{position:sticky;top:0;z-index:5;display:flex;align-items:center;gap:16px;height:66px;padding:0 24px;border-bottom:1px solid #ffffff73;background:#8cd3e5cf;backdrop-filter:blur(14px)}
 .pg-upload-pdf .search{width:min(460px,52cqw);height:39px;padding:0 14px;border:1px solid #ffffffbf;border-radius:11px;background:#ffffffc7;color:var(--navy);outline:0}
 .pg-upload-pdf .top-spacer{flex:1}
@@ -160,8 +160,6 @@
 .pg-upload-pdf .notification-actions-bar .btn{flex:1}
 .pg-upload-pdf .notification-page-number{display:block}
 .pg-upload-pdf .notification-page-number .pagination{margin-top:8px}}
-.pg-upload-pdf > .app-shell > .sidebar{display: none;}
-.pg-upload-pdf > .app-shell > .main{margin-left: 0;}
 .pg-upload-pdf .editor-toolbar{display:flex;gap:5px;padding:7px;border:1px solid #dbeaf3;border-bottom:0;border-radius:9px 9px 0 0;background:#f7fcff}
 .pg-upload-pdf .editor-toolbar button{min-width:29px;padding:5px 8px;border:0;border-radius:5px;color:var(--navy);background:#fff;font-weight:700}
 .pg-upload-pdf .editor-toolbar button:hover{background:var(--mint)}

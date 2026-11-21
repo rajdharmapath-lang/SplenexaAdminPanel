@@ -273,31 +273,15 @@ function UploadVideoPage() {
                 </h3>
                 <div className="row" style={{ alignItems: "center", marginTop: "8px" }}>
                   <label className="f" style={{ margin: "0" }}>
-                    Course Access
+                    Course Plans
                     {" "}
                     <s>
                       *
                     </s>
                   </label>
-                  <div className="sl" style={{ height: "41px" }}>
-                    <div className="tags">
-                      <span className="tg2">
-                        FMGE Full Course
-                        {" "}
-                        <i className="bi bi-x-lg"></i>
-                      </span>
-                      <span className="tg2">
-                        Test Series
-                        {" "}
-                        <i className="bi bi-x-lg"></i>
-                      </span>
-                      <span className="tg2">
-                        Study Material
-                        {" "}
-                        <i className="bi bi-x-lg"></i>
-                      </span>
-                    </div>
-                    <i className="bi bi-chevron-down"></i>
+                  <div>
+                    <select className="course-plan-select" id="video-course-access" multiple required size="3" aria-label="Course Plans"></select>
+                    <small className="course-plan-help">Choose one or more plans. Hold Ctrl/Cmd to select multiple.</small>
                   </div>
                 </div>
                 <div className="row">

@@ -1,7 +1,10 @@
 // Behaviour carried over unchanged from the original HTML page.
 // Runs once after the JSX markup mounts; `document`, `window`, `parent` and timers are
 // scoped shims provided by useLegacyScript (see src/legacy/useLegacyScript.js).
+import { populateCoursePlanSelect } from '../../coursePlans';
+
 export default function init(document, window, parent, setTimeout, setInterval) {
+populateCoursePlanSelect(document.getElementById('video-course-access'),window.sessionStorage);
 const videoDropzone=document.getElementById('video-dropzone');
 const videoFile=document.getElementById('video-file');
 const videoFileName=document.getElementById('video-file-name');

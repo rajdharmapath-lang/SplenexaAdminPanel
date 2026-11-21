@@ -95,3 +95,39 @@
 .pg-create-test .dur{flex-wrap:wrap}
 .pg-create-test .dr{grid-template-columns:1fr}}
 .workflow{display:flex;align-items:center;gap:10px;margin:0 22px 14px;padding:10px 14px;border:1px solid #c5d3ea;border-radius:8px;background:#f7fbff;color:#6b7c98;font-size:12px;font-weight:600}.workflow i{font-size:11px;color:#9bb0c9}.workflow .active{color:#0b2194}
+.pg-create-test .scoring-field{min-width:0}
+.pg-create-test .icon-code-grid{margin-bottom:18px}
+.pg-create-test .bootstrap-icon-input{position:relative}
+.pg-create-test .bootstrap-icon-input>i{position:absolute;z-index:1;left:15px;top:50%;transform:translateY(-50%);color:#0b2194;font-size:19px;pointer-events:none}
+.pg-create-test .bootstrap-icon-input .in{padding-left:45px}
+.pg-create-test .bootstrap-icon-help{display:block;margin-top:5px;color:var(--mut);font-size:10px}
+.pg-create-test .bootstrap-icon-help code{color:#0b2194}
+.pg-create-test .scoring-toggle{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:25px;margin-bottom:8px}
+.pg-create-test .scoring-toggle .f{margin:0;font-size:13px;line-height:1.35}
+.pg-create-test .scoring-field-disabled{opacity:.55}
+.pg-create-test .in:disabled{background:#f1f4f8;color:#8290a7;cursor:not-allowed}
+.pg-create-test .question-selection-card{padding-bottom:18px}
+.pg-create-test .question-selection-heading{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:16px}
+.pg-create-test .question-selection-heading h3{margin-bottom:5px}
+.pg-create-test .question-selection-heading p{color:var(--mut);font-size:12px;line-height:1.5}
+.pg-create-test .selection-count{flex:none;padding:8px 12px;border-radius:999px;background:#e8f0fb;color:#0b2194;font-size:12px;font-weight:700}
+.pg-create-test .question-selection-columns{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.pg-create-test .question-selection-columns section{min-width:0}
+.pg-create-test .question-selection-columns h4{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;color:var(--navy);font-size:14px}
+.pg-create-test .selection-add-all{height:27px;padding:0 9px;border:1px solid #cfe2ef;border-radius:6px;background:#fff;color:#0b5b9e;font:600 10px Poppins;cursor:pointer}
+.pg-create-test .selection-add-all:disabled{opacity:.5;cursor:not-allowed}
+.pg-create-test .question-selection-columns h4 span{min-width:24px;padding:3px 7px;border-radius:10px;background:#e8f0fb;text-align:center;font-size:11px}
+.pg-create-test .question-selection-list{display:grid;align-content:start;gap:8px;max-height:300px;min-height:96px;overflow:auto;padding:10px;border:1px solid #e1eaf4;border-radius:8px;background:#f9fcff}
+.pg-create-test .question-selection-row{display:flex;align-items:flex-start;gap:10px;padding:10px;border:1px solid #e2eaf3;border-radius:7px;background:#fff}
+.pg-create-test .question-selection-row>div{min-width:0;flex:1}
+.pg-create-test .question-selection-row strong{display:block;color:#20345f;font-size:12px;line-height:1.5;overflow-wrap:anywhere}
+.pg-create-test .question-selection-row small{display:block;margin-top:3px;color:#73809a;font-size:10px}
+.pg-create-test .question-selection-row input[type=checkbox]{width:17px;height:17px;flex:none;margin-top:2px;accent-color:#0b8d71;cursor:pointer}
+.pg-create-test .question-selection-row button{height:28px;flex:none;padding:0 9px;border:1px solid #d7e3ef;border-radius:6px;background:#fff;color:#31527d;font:600 10px Poppins;cursor:pointer}
+.pg-create-test .question-selection-row button.remove-question{border-color:#f0caca;background:#fff5f5;color:#b43d3d}
+.pg-create-test .selection-empty{align-self:center;margin:auto;color:#77859d;font-size:11px;line-height:1.55;text-align:center}
+@container (max-width:760px){.pg-create-test .question-selection-columns{grid-template-columns:1fr}
+.pg-create-test .question-selection-heading{flex-direction:column}
+.pg-create-test .selection-count{align-self:flex-start}
+.pg-create-test .row4{grid-template-columns:1fr}
+.pg-create-test .duration-field{grid-column:span 1}}

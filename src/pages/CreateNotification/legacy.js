@@ -5,6 +5,7 @@ export default function init(document, window, parent, setTimeout, setInterval) 
 // Live preview: mirror title and message into the preview card
   const t = document.getElementById('title'), m = document.getElementById('msg');
   const pt = document.querySelector('.pv-t'), pb = document.querySelector('.pv-b');
+  if (!t || !m || !pt || !pb) return;
   const dt = pt.textContent, db = pb.innerHTML;
   t.addEventListener('input', () => pt.textContent = t.value.trim() || dt);
   m.addEventListener('input', () => pb.textContent = m.value.trim() || '') ;

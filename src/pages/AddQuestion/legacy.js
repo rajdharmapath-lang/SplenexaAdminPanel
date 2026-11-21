@@ -341,7 +341,10 @@ export default function init(document, window) {
         window.alert('Saved questions could not be loaded. The current question was not saved.');
         return;
       }
-      const item = { product: currentProduct, productId, subject: currentSubject, topic: currentTopic, text, questionHtml, explanationHtml, status, options: savedOptions, answer: correctOption };
+      const questionId = existingQuestion?.id || (window.crypto && typeof window.crypto.randomUUID === 'function'
+        ? window.crypto.randomUUID()
+        : 'question-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2));
+      const item = { id: questionId, product: currentProduct, productId, subject: currentSubject, topic: currentTopic, text, questionHtml, explanationHtml, status, options: savedOptions, answer: correctOption };
       if (isEditing) questions[Number(editIndex)] = Object.assign(questions[Number(editIndex)] || {}, item);
       else questions.push(item);
       try {
@@ -358,11 +361,17 @@ export default function init(document, window) {
         tests.forEach(test => {
           const testSubject = subjects.find(subjectItem => subjectItem.id === test.subjectId);
           if (!testSubject) return;
-          const testQuestions = questions.filter(question =>
+          const matchingQuestions = questions.filter(question =>
             question.productId === test.productId &&
             question.subject === testSubject.name &&
             (test.topic ? question.topic === test.topic : !question.topic)
           );
+          let testQuestions = matchingQuestions;
+          if (test.questionSelectionEnabled) {
+            const selectedIds = new Set((Array.isArray(test.questionIds) ? test.questionIds : []).map(String));
+            testQuestions = matchingQuestions.filter(question => selectedIds.has(String(question.id)));
+            test.questionIds = testQuestions.map(question => String(question.id));
+          }
           test.totalQuestions = testQuestions.length;
           test.totalMarks = test.totalQuestions * (Number(test.marksPerQuestion) || 0);
         });

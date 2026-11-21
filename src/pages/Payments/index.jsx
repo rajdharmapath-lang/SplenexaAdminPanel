@@ -268,7 +268,7 @@ function PaymentsPage() {
                         Course Plans &amp; Pricing
                       </h2>
                       <p>
-                        Bundle multiple course products into PLAN A, PLAN B, PLAN C, or a new plan.
+                        Build named plans such as Foundation or Elevation with included products and prices for multiple durations.
                       </p>
                     </div>
                     <button className="button button-primary" type="button" data-action="create-fee">
@@ -315,7 +315,7 @@ function PaymentsPage() {
                     </table>
                   </div>
                   <p className="section-note">
-                    Plans can combine PDF, Image Based, Video, and active products created in Question Bank. Configure the plan price and validity before publishing.
+                    Plans can combine PDF, Image Based, Video, and active products created in Question Bank. Each plan can offer multiple month-based durations and prices.
                   </p>
                 </section>
                 <section className="tab-panel card panel" id="panel-access" role="tabpanel" hidden>
@@ -738,9 +738,15 @@ function PaymentsPage() {
             <div className="form-grid">
               <div className="form-field full">
                 <label htmlFor="fee-plan-name">
-                  Plan Name *
+                  Plan Name or Tier *
                 </label>
-                <input className="form-control" id="fee-plan-name" name="planName" maxLength="60" required placeholder="e.g. PLAN A" />
+                <input className="form-control" id="fee-plan-name" name="planName" maxLength="60" required placeholder="e.g. Foundation or Elevation" />
+              </div>
+              <div className="form-field full">
+                <label htmlFor="fee-plan-description">
+                  Plan Description
+                </label>
+                <textarea className="form-control plan-description-input" id="fee-plan-description" name="description" maxLength="300" rows="2" required placeholder="Describe who this plan is for and what students will achieve."></textarea>
               </div>
               <div className="form-field full">
                 <label htmlFor="fee-product">
@@ -761,28 +767,27 @@ function PaymentsPage() {
                   Products with subjects let you include all subjects or choose specific ones.
                 </span>
               </div>
-              <div className="form-field">
-                <label htmlFor="fee-base">
-                  Base fee (₹) *
-                </label>
-                <div className="input-prefix">
-                  <span>
-                    ₹
-                  </span>
-                  <input className="form-control" id="fee-base" name="baseFee" type="number" min="0" step="0.01" defaultValue="14999" required />
+              <div className="form-field full">
+                <div className="pricing-options-heading">
+                  <label>
+                    Duration and Price *
+                  </label>
+                  <button className="button button-secondary" id="add-plan-duration" type="button">
+                    ＋ Add duration
+                  </button>
                 </div>
+                <div className="plan-pricing-options" id="plan-pricing-options"></div>
+                <span className="form-hint">
+                  Add each duration in months with its price. The discount, if set, applies to every duration.
+                </span>
+                <input id="fee-base" name="baseFee" type="hidden" value="0" readOnly />
+                <input id="fee-validity" name="validity" type="hidden" value="90" readOnly />
               </div>
               <div className="form-field">
                 <label htmlFor="fee-discount">
                   Discount (%)
                 </label>
-                <input className="form-control" id="fee-discount" name="discount" type="number" min="0" max="100" step="0.01" defaultValue="10" />
-              </div>
-              <div className="form-field">
-                <label htmlFor="fee-validity">
-                  Product validity (days) *
-                </label>
-                <input className="form-control" id="fee-validity" name="validity" type="number" min="1" step="1" defaultValue="365" required />
+                <input className="form-control" id="fee-discount" name="discount" type="number" min="0" max="100" step="0.01" defaultValue="0" />
               </div>
               <div className="form-field">
                 <label htmlFor="fee-mode">
@@ -817,10 +822,10 @@ function PaymentsPage() {
             <div className="calculation-box">
               <div className="calculation-row">
                 <span>
-                  Base fee
+                  First duration base fee
                 </span>
                 <strong id="fee-preview-base">
-                  ₹14,999.00
+                  ₹0.00
                 </strong>
               </div>
               <div className="calculation-row">
@@ -828,7 +833,7 @@ function PaymentsPage() {
                   Discount amount
                 </span>
                 <strong id="fee-preview-discount">
-                  −₹1,499.90
+                  −₹0.00
                 </strong>
               </div>
               <div className="calculation-row total">
@@ -836,12 +841,12 @@ function PaymentsPage() {
                   Final fee before taxes
                 </span>
                 <strong id="fee-preview-final">
-                  ₹13,499
+                  ₹0
                 </strong>
               </div>
             </div>
             <p className="section-note">
-              The preview rounds the final price to the nearest rupee. Checkout should use a consistent server-side rounding and tax policy.
+              Preview uses the shortest duration. The shared discount applies to each duration; checkout should use consistent server-side rounding and tax rules.
             </p>
             <div className="modal-footer">
               <button className="button button-secondary" type="button" data-close-modal="">
@@ -875,7 +880,7 @@ function PaymentsPage() {
           <div className="calculation-box">
             <div className="calculation-row">
               <span>
-                Base fee
+                Shortest duration base fee
               </span>
               <strong id="preview-base"></strong>
             </div>

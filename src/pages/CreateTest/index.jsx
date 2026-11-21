@@ -67,7 +67,7 @@ function CreateTestPage() {
             <p className="create-test-description" id="create-test-description"></p>
             <div className="g2" style={{ marginBottom: "22px" }}>
               <div>
-                <label className="f" id="test-name-label">
+                <label className="f">
                   Select Product
                   {" "}
                   <s>
@@ -96,7 +96,7 @@ function CreateTestPage() {
                 </div>
               </div>
               <div>
-                <label className="f">
+                <label className="f" id="test-name-label">
                   Test Name
                   {" "}
                   <s>
@@ -104,6 +104,16 @@ function CreateTestPage() {
                   </s>
                 </label>
                 <input className="in" id="test-name" placeholder="Enter test name" />
+              </div>
+            </div>
+            <div className="g2 icon-code-grid">
+              <div id="test-icon-field">
+                <label className="f" htmlFor="test-icon-code">Test Bootstrap Icon</label>
+                <div className="bootstrap-icon-input">
+                  <i id="test-icon-preview" className="bi bi-clipboard2-check-fill" aria-hidden="true"></i>
+                  <input className="in" id="test-icon-code" defaultValue="bi bi-clipboard2-check-fill" placeholder="bi bi-clipboard2-check-fill" autoComplete="off" />
+                </div>
+                <small className="bootstrap-icon-help">Example: <code>bi bi-clipboard2-check-fill</code></small>
               </div>
             </div>
             <div className="parent-subject-toggle" id="parent-subject-toggle-field">
@@ -117,12 +127,20 @@ function CreateTestPage() {
               </label>
             </div>
             <div className="g2" id="test-topic-field" style={{ marginBottom: "22px" }}>
-              <div>
+              <div id="test-topic-name-field">
                 <label className="f" htmlFor="test-topic">
                   Topic Name
                   <s>*</s>
                 </label>
                 <input className="in" id="test-topic" placeholder="Enter topic name" />
+              </div>
+              <div id="topic-icon-field">
+                <label className="f" htmlFor="topic-icon-code">Topic Bootstrap Icon</label>
+                <div className="bootstrap-icon-input">
+                  <i id="topic-icon-preview" className="bi bi-bookmark-fill" aria-hidden="true"></i>
+                  <input className="in" id="topic-icon-code" defaultValue="bi bi-bookmark-fill" placeholder="bi bi-bookmark-fill" autoComplete="off" />
+                </div>
+                <small className="bootstrap-icon-help">Example: <code>bi bi-bookmark-fill</code></small>
               </div>
             </div>
             <div className="g2">
@@ -203,24 +221,28 @@ function CreateTestPage() {
                 <input className="in" id="total-marks" value="0" readOnly style={{ fontWeight: "600" }} />
               </div>
               <div>
-                <label className="f">
-                  Mark for 1 Question
-                  {" "}
-                  <s>
-                    *
-                  </s>
-                </label>
-                <input className="in" id="marks-per-question" type="number" min="0" step="any" defaultValue="0" style={{ fontWeight: "600" }} />
+                <div className="scoring-field">
+                  <div className="scoring-toggle">
+                  <label className="f" htmlFor="marks-enabled">Mark for 1 Question</label>
+                  <label className="sw" htmlFor="marks-enabled">
+                    <input id="marks-enabled" type="checkbox" defaultChecked aria-label="Enable marks per question" />
+                    <span></span>
+                  </label>
+                  </div>
+                  <input className="in" id="marks-per-question" type="number" min="0" step="any" defaultValue="1" style={{ fontWeight: "600" }} />
+                </div>
               </div>
               <div>
-                <label className="f">
-                  Negative Mark (for 1 Question)
-                  {" "}
-                  <s>
-                    *
-                  </s>
-                </label>
-                <input className="in" id="negative-marking" type="number" min="0" step="any" defaultValue="0" style={{ fontWeight: "600" }} />
+                <div className="scoring-field">
+                  <div className="scoring-toggle">
+                  <label className="f" htmlFor="negative-marking-enabled">Negative Mark (for 1 Question)</label>
+                  <label className="sw" htmlFor="negative-marking-enabled">
+                    <input id="negative-marking-enabled" type="checkbox" aria-label="Enable negative marking" />
+                    <span></span>
+                  </label>
+                  </div>
+                  <input className="in" id="negative-marking" type="number" min="0" step="any" defaultValue="0" style={{ fontWeight: "600" }} />
+                </div>
               </div>
               <div className="duration-field">
                 <div className="duration-toggle">
@@ -247,6 +269,29 @@ function CreateTestPage() {
                   </span>
                 </div>
               </div>
+            </div>
+          </div>
+          <div className="card question-selection-card" id="question-selection-card">
+            <div className="question-selection-heading">
+              <div>
+                <h3><i className="bi bi-ui-checks-grid"></i> Question Selection</h3>
+                <p>Add or remove questions for this test. Total marks update from the selected question count.</p>
+              </div>
+              <span className="selection-count" id="question-selection-summary">0 questions selected</span>
+            </div>
+            <div className="question-selection-columns">
+              <section>
+                <h4>Available Questions <button className="selection-add-all" id="select-all-questions" type="button">Add all</button></h4>
+                <div className="question-selection-list" id="available-question-list">
+                  <p className="selection-empty">Enter the test/subject and topic to find matching questions.</p>
+                </div>
+              </section>
+              <section>
+                <h4>Selected Questions <span id="selected-question-count">0</span></h4>
+                <div className="question-selection-list selected-questions" id="selected-question-list">
+                  <p className="selection-empty">No questions selected.</p>
+                </div>
+              </section>
             </div>
           </div>
           <div className="card" style={{ paddingBottom: "18px" }}>

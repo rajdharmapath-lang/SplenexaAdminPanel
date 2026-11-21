@@ -63,6 +63,7 @@
 .pg-create-coupon .tags{display:flex;gap:7px;align-items:center;flex:1;overflow:hidden}
 .pg-create-coupon .tg2{background:#e3f1fb;color:#0a3b8c;border-radius:4px;padding:5px 8px;font-size:10.5px;display:flex;gap:9px;align-items:center;white-space:nowrap}
 .pg-create-coupon .tg2 i{font-size:9px}
+.pg-create-coupon .course-plan-select{width:100%;min-height:82px;padding:6px;border:1px solid var(--bd);border-radius:4px;background:#fff;color:var(--ink);font:12px Poppins}
 .pg-create-coupon .ap2{display:grid;grid-template-columns:1fr 1.3fr;gap:20px}
 .pg-create-coupon .ul{display:grid;grid-template-columns:238px 230px 1fr;gap:20px;align-items:start}
 .pg-create-coupon .ul .in{height:34px}

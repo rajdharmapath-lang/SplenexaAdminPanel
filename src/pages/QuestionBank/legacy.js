@@ -20,6 +20,7 @@ export default function init(document, window) {
       ? window.crypto.randomUUID()
       : 'product-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2);
   }
+  const knownQuestionIds = new Set();
   if (subjects.some(function (subject) { return !subject.productId; })) {
     let legacyProduct = products.find(function (product) { return product.name === 'FMGE Q-Bank'; });
     if (!legacyProduct) {
@@ -31,6 +32,7 @@ export default function init(document, window) {
   subjects.forEach(function (subject) {
     if (!subject.id) subject.id = createId();
     if (!Array.isArray(subject.topics)) subject.topics = [];
+    if (!subject.topicIcons || typeof subject.topicIcons !== 'object' || Array.isArray(subject.topicIcons)) subject.topicIcons = {};
     subject.topics.sort(function (left, right) { return left.localeCompare(right); });
   });
   products.forEach(function (product) {
@@ -39,6 +41,8 @@ export default function init(document, window) {
     }
   });
   questions.forEach(function (question) {
+    if (!question.id || knownQuestionIds.has(String(question.id))) question.id = createId();
+    knownQuestionIds.add(String(question.id));
     if (!question.productId) {
       const owner = question.product
         ? products.find(function (product) { return product.name === question.product; })
@@ -56,19 +60,26 @@ export default function init(document, window) {
     tests.forEach(function (test) {
       const subject = subjects.find(function (item) { return item.id === test.subjectId; });
       if (!subject) return;
-      const count = questions.filter(function (question) {
+      const matchingQuestions = questions.filter(function (question) {
         return question.productId === test.productId &&
           question.subject === subject.name &&
           (test.topic ? question.topic === test.topic : !question.topic);
-      }).length;
-      test.totalQuestions = count;
-      test.totalMarks = count * (Number(test.marksPerQuestion) || 0);
+      });
+      let selectedQuestions = matchingQuestions;
+      if (test.questionSelectionEnabled) {
+        const selectedIds = new Set((Array.isArray(test.questionIds) ? test.questionIds : []).map(String));
+        selectedQuestions = matchingQuestions.filter(function (question) { return selectedIds.has(String(question.id)); });
+        test.questionIds = selectedQuestions.map(function (question) { return String(question.id); });
+      }
+      test.totalQuestions = selectedQuestions.length;
+      test.totalMarks = test.totalQuestions * (Number(test.marksPerQuestion) || 0);
     });
     window.sessionStorage.setItem('fmge-question-bank-tests', JSON.stringify(tests));
   }
   syncTestQuestionCounts();
   let currentProductId = null;
   let editingProductId = null;
+  let editingProductIconDataUrl = '';
   let editingItem = null;
   const productBrowser = document.getElementById('product-browser');
   const productList = document.getElementById('product-list');
@@ -95,8 +106,15 @@ export default function init(document, window) {
     }
     productList.innerHTML = products.map(function (product) {
       const questionCount = questions.filter(function (question) { return question.productId === product.id; }).length;
+      const iconDataUrl = /^data:image\/(?:png|jpeg|webp);base64,/i.test(product.iconDataUrl || '') ? product.iconDataUrl : '';
+      const iconClass = normalizeBootstrapIcon(product.iconBootstrapClass);
+      const productIcon = product.showIcon && iconClass
+        ? '<i class="' + escapeHtml(iconClass) + '"></i>'
+        : product.showIcon && iconDataUrl
+          ? '<img src="' + escapeHtml(iconDataUrl) + '" alt="" />'
+          : '<i class="bi bi-box-seam-fill"></i>';
       return '<article class="product-card" data-product-id="' + escapeHtml(product.id) + '" tabindex="0" role="group" aria-label="' + escapeHtml(product.name) + ' product">' +
-        '<div class="product-card-head"><div class="product-card-info"><h3>' + escapeHtml(product.name) + '</h3><p>' + escapeHtml(product.description || 'No description provided.') + '</p></div>' +
+        '<div class="product-card-head"><div class="product-card-info"><span class="product-card-icon">' + productIcon + '</span><div><h3>' + escapeHtml(product.name) + '</h3><p>' + escapeHtml(product.description || 'No description provided.') + '</p></div></div>' +
         '<div class="product-card-actions">' +
         '<button type="button" class="product-actions-toggle" aria-label="More actions for ' + escapeHtml(product.name) + '" aria-haspopup="menu" aria-expanded="false"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="5" r="2"></circle><circle cx="12" cy="12" r="2"></circle><circle cx="12" cy="19" r="2"></circle></svg></button>' +
         '<div class="product-action-menu" role="menu" hidden><button type="button" class="delete-product" data-product-id="' + escapeHtml(product.id) + '" role="menuitem"><i class="bi bi-trash3-fill"></i>Delete</button></div>' +
@@ -136,6 +154,7 @@ export default function init(document, window) {
 
   function openProductDialog(product) {
     editingProductId = product ? product.id : null;
+    editingProductIconDataUrl = product ? product.iconDataUrl || '' : '';
     document.getElementById('product-dialog-title').innerHTML = '<i class="bi bi-' + (product ? 'pencil-fill' : 'box-seam-fill') + '"></i> ' + (product ? 'Edit Product' : 'Create Product');
     document.getElementById('product-name').value = product ? product.name : '';
     document.getElementById('product-description').value = product ? product.description || '' : '';
@@ -144,6 +163,11 @@ export default function init(document, window) {
     });
     document.getElementById('product-active').checked = product ? Boolean(product.isActive) : true;
     document.getElementById('product-topics-enabled').checked = product ? Boolean(product.supportsTopics) : true;
+    document.getElementById('product-icon-enabled').checked = product ? Boolean(product.showIcon) : true;
+    document.getElementById('product-icon-code').value = product ? product.iconBootstrapClass || '' : '';
+    document.getElementById('product-icon-file').value = '';
+    document.getElementById('product-icon-name').textContent = editingProductIconDataUrl ? 'Current icon selected' : 'PNG, JPG, or WebP · up to 256 KB';
+    renderProductIconPreview();
     document.getElementById('save-product').textContent = product ? 'Save Changes' : 'Create Product';
     productDialog.classList.add('on');
     document.getElementById('product-name').focus();
@@ -152,12 +176,33 @@ export default function init(document, window) {
   function closeProductDialog() {
     productDialog.classList.remove('on');
     editingProductId = null;
+    editingProductIconDataUrl = '';
+  }
+
+  function renderProductIconPreview() {
+    const preview = document.getElementById('product-icon-preview');
+    const removeButton = document.getElementById('product-icon-remove');
+    const isValidIcon = /^data:image\/(?:png|jpeg|webp);base64,/i.test(editingProductIconDataUrl);
+    const iconClass = normalizeBootstrapIcon(document.getElementById('product-icon-code').value);
+    document.getElementById('product-icon-code-preview').className = iconClass || 'bi bi-box-seam-fill';
+    preview.innerHTML = iconClass
+      ? '<i class="' + escapeHtml(iconClass) + '" aria-hidden="true"></i>'
+      : isValidIcon
+        ? '<img src="' + escapeHtml(editingProductIconDataUrl) + '" alt="Product icon preview" />'
+        : '<i class="bi bi-image"></i>';
+    removeButton.hidden = !isValidIcon;
   }
 
   function escapeHtml(value) {
     return String(value).replace(/[&<>"']/g, function (character) {
       return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[character];
     });
+  }
+
+  function normalizeBootstrapIcon(value) {
+    const iconClass = String(value || '').trim().replace(/\s+/g, ' ');
+    if (/^bi-[a-z0-9-]+$/i.test(iconClass)) return 'bi ' + iconClass;
+    return /^bi bi-[a-z0-9-]+$/i.test(iconClass) ? iconClass : '';
   }
 
   function openNameDialog(type, index) {
@@ -168,6 +213,16 @@ export default function init(document, window) {
     document.getElementById('subject-dialog-title').innerHTML = '<i class="bi bi-pencil-fill"></i> Edit ' + (isSubject ? 'Subject' : 'Topic');
     document.getElementById('subject-dialog-label').textContent = (isSubject ? 'Subject' : 'Topic') + ' Name';
     document.getElementById('new-subject-name').value = editingItem.oldName;
+    document.getElementById('topic-icon-code-field').hidden = isSubject;
+    if (!isSubject) {
+      const subject = subjects[Number(subjectView.dataset.subjectIndex)];
+      const iconClass = subject.topicIcons[item] || '';
+      document.getElementById('topic-icon-code').value = iconClass;
+      document.getElementById('topic-icon-code-preview').className = normalizeBootstrapIcon(iconClass) || 'bi bi-bookmark-fill';
+    } else {
+      document.getElementById('topic-icon-code').value = '';
+      document.getElementById('topic-icon-code-preview').className = 'bi bi-bookmark-fill';
+    }
     document.getElementById('save-create-subject').textContent = 'Save Changes';
     subjectDialog.classList.add('on');
     document.getElementById('new-subject-name').focus();
@@ -178,6 +233,8 @@ export default function init(document, window) {
     subjectDialog.classList.remove('on');
     document.getElementById('subject-dialog-title').innerHTML = '<i class="bi bi-plus-circle-fill"></i> Create Subject';
     document.getElementById('subject-dialog-label').textContent = 'Subject Name';
+    document.getElementById('topic-icon-code-field').hidden = true;
+    document.getElementById('topic-icon-code').value = '';
     document.getElementById('save-create-subject').textContent = 'Save';
   }
 
@@ -214,8 +271,9 @@ export default function init(document, window) {
       const questionCount = questions.filter(function (question) {
         return question.productId === currentProductId && question.subject === subject.name && question.topic === topic;
       }).length;
+      const iconClass = normalizeBootstrapIcon(subject.topicIcons[topic]) || 'bi bi-bookmark-fill';
       return '<article class="topic-card category-card" data-topic="' + encodeURIComponent(topic) + '" data-topic-index="' + topicIndex + '" tabindex="0" role="group" aria-label="' + escapeHtml(topic) + ' topic">' +
-        '<div class="category-card-head"><div class="category-card-info"><h3>' + escapeHtml(topic) + '</h3><p>' + escapeHtml(subject.name) + '</p></div>' +
+        '<div class="category-card-head"><span class="topic-card-icon"><i class="' + escapeHtml(iconClass) + '"></i></span><div class="category-card-info"><h3>' + escapeHtml(topic) + '</h3><p>' + escapeHtml(subject.name) + '</p></div>' +
         categoryActions('topic', topicIndex) + '</div><hr class="category-card-divider" /><div class="category-card-footer"><span class="product-badge question-count">Questions: ' + questionCount.toLocaleString('en-US') + '</span></div></article>';
     }).join('') || '<p class="empty-topics">No topics added yet.</p>';
   }
@@ -245,7 +303,7 @@ export default function init(document, window) {
     else subjectView.removeAttribute('data-topic');
     document.getElementById('question-list-title').textContent = topicName ? topicName + ' Questions' : subject.name + ' Questions';
     createTestFromProduct.style.display = 'none';
-    document.getElementById('create-subject-from-product').style.display = 'none';
+    document.getElementById('create-subject-from-product').hidden = true;
     topicCreateQuestion.style.display = 'inline-flex';
     backQuestionList.style.display = 'inline-flex';
     subjectView.classList.add('on');
@@ -259,7 +317,7 @@ export default function init(document, window) {
     document.getElementById('question-list-title').textContent = subject.name + ' Topics';
     createTestFromProduct.style.display = 'none';
     document.getElementById('create-subject-from-product').innerHTML = '<i class="bi bi-plus-circle"></i> Add Topic';
-    document.getElementById('create-subject-from-product').style.display = '';
+    document.getElementById('create-subject-from-product').hidden = false;
     topicCreateQuestion.style.display = 'none';
     backQuestionList.style.display = 'none';
     subjectView.classList.add('on');
@@ -276,7 +334,7 @@ export default function init(document, window) {
     document.getElementById('question-list-title').textContent = 'Subjects';
     createTestFromProduct.style.display = '';
     document.getElementById('create-subject-from-product').innerHTML = '<i class="bi bi-plus-circle"></i> Create Subject';
-    document.getElementById('create-subject-from-product').style.display = '';
+    document.getElementById('create-subject-from-product').hidden = false;
     topicCreateQuestion.style.display = 'none';
     backQuestionList.style.display = 'none';
     subjectView.classList.add('on');
@@ -317,10 +375,58 @@ export default function init(document, window) {
 
   document.getElementById('create-product').addEventListener('click', function () { openProductDialog(null); });
   document.getElementById('cancel-product').addEventListener('click', closeProductDialog);
+  document.getElementById('product-icon-code').addEventListener('input', renderProductIconPreview);
+  document.getElementById('product-icon-upload').addEventListener('click', function () {
+    document.getElementById('product-icon-file').click();
+  });
+  document.getElementById('product-icon-file').addEventListener('change', function (event) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    if (!['image/png', 'image/jpeg', 'image/webp'].includes(file.type) || file.size > 256 * 1024) {
+      window.alert('Choose a PNG, JPG, or WebP icon smaller than 256 KB.');
+      event.target.value = '';
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = function () {
+      if (typeof reader.result !== 'string' || !/^data:image\/(?:png|jpeg|webp);base64,/i.test(reader.result)) {
+        window.alert('The selected file could not be read as a supported image.');
+        return;
+      }
+      editingProductIconDataUrl = reader.result;
+      document.getElementById('product-icon-name').textContent = file.name;
+      renderProductIconPreview();
+    };
+    reader.onerror = function () {
+      console.error('Could not read the selected product icon.', reader.error);
+      window.alert('The product icon could not be read. Choose another image and try again.');
+    };
+    reader.readAsDataURL(file);
+  });
+  document.getElementById('product-icon-remove').addEventListener('click', function () {
+    editingProductIconDataUrl = '';
+    document.getElementById('product-icon-file').value = '';
+    document.getElementById('product-icon-name').textContent = 'PNG, JPG, or WebP · up to 256 KB';
+    if (!normalizeBootstrapIcon(document.getElementById('product-icon-code').value)) {
+      document.getElementById('product-icon-enabled').checked = false;
+    }
+    renderProductIconPreview();
+  });
   document.getElementById('save-product').addEventListener('click', function () {
     const nameInput = document.getElementById('product-name');
+    const iconCodeInput = document.getElementById('product-icon-code');
+    const iconBootstrapClass = normalizeBootstrapIcon(iconCodeInput.value);
     const name = nameInput.value.trim();
     if (!name) return nameInput.focus();
+    if (iconCodeInput.value.trim() && !iconBootstrapClass) {
+      iconCodeInput.setCustomValidity('Use a Bootstrap Icons class such as "bi bi-book-fill".');
+      iconCodeInput.reportValidity();
+      iconCodeInput.addEventListener('input', function clearIconCodeError() {
+        iconCodeInput.setCustomValidity('');
+        iconCodeInput.removeEventListener('input', clearIconCodeError);
+      });
+      return;
+    }
     const duplicate = products.some(function (product) {
       return product.name.toLowerCase() === name.toLowerCase() && product.id !== editingProductId;
     });
@@ -340,7 +446,10 @@ export default function init(document, window) {
       description: document.getElementById('product-description').value.trim(),
       accessType: accessType,
       isActive: document.getElementById('product-active').checked,
-      supportsTopics: document.getElementById('product-topics-enabled').checked
+      supportsTopics: document.getElementById('product-topics-enabled').checked,
+      iconDataUrl: editingProductIconDataUrl,
+      iconBootstrapClass: iconBootstrapClass,
+      showIcon: document.getElementById('product-icon-enabled').checked
     };
     if (editingProductId) {
       const oldName = products.find(function (product) { return product.id === editingProductId; })?.name;
@@ -432,11 +541,22 @@ export default function init(document, window) {
   document.getElementById('cancel-create-subject').addEventListener('click', function () {
     closeNameDialog();
   });
+  document.getElementById('topic-icon-code').addEventListener('input', function (event) {
+    event.target.setCustomValidity('');
+    document.getElementById('topic-icon-code-preview').className = normalizeBootstrapIcon(event.target.value) || 'bi bi-bookmark-fill';
+  });
   document.getElementById('save-create-subject').addEventListener('click', function () {
     const input = document.getElementById('new-subject-name');
+    const topicIconInput = document.getElementById('topic-icon-code');
+    const topicIconClass = normalizeBootstrapIcon(topicIconInput.value);
     const name = input.value.trim();
     if (!name) {
       input.focus();
+      return;
+    }
+    if (editingItem?.type === 'topic' && topicIconInput.value.trim() && !topicIconClass) {
+      topicIconInput.setCustomValidity('Use a Bootstrap Icons class such as "bi bi-bookmark-fill".');
+      topicIconInput.reportValidity();
       return;
     }
     if (editingItem) {
@@ -466,6 +586,9 @@ export default function init(document, window) {
           input.focus();
           return;
         }
+        if (current.oldName !== name) delete currentSubject.topicIcons[current.oldName];
+        if (topicIconClass) currentSubject.topicIcons[name] = topicIconClass;
+        else delete currentSubject.topicIcons[name];
         currentSubject.topics[current.index] = name;
         questions.forEach(function (question) {
           if (question.productId === currentProductId && question.subject === currentSubject.name && question.topic === current.oldName) question.topic = name;
@@ -533,6 +656,7 @@ export default function init(document, window) {
       const topic = subject && subject.topics[topicIndex];
       if (topic && window.confirm('Delete "' + topic + '" and its questions?')) {
         subject.topics.splice(topicIndex, 1);
+        delete subject.topicIcons[topic];
         questions = questions.filter(function (question) { return question.productId !== currentProductId || question.subject !== subject.name || question.topic !== topic; });
         window.sessionStorage.setItem(subjectStorageKey, JSON.stringify(subjects));
         window.sessionStorage.setItem(questionStorageKey, JSON.stringify(questions));
