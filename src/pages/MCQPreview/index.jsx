@@ -7,15 +7,6 @@ const STORAGE_KEYS = {
   questions: 'fmge-question-bank-questions',
   tests: 'fmge-question-bank-tests',
 };
-const TEST_CATEGORIES = [
-  { id: 'grand', title: 'Grand Test', subtitle: 'Full-length practice to build exam confidence.', icon: 'clipboard-check' },
-  { id: 'subject', title: 'Subject-wise Test', subtitle: 'Strengthen concepts, one subject at a time.', icon: 'bookshelf' },
-  { id: 'image', title: 'Image Based Test', subtitle: 'Sharpen visual recognition with clinical images.', icon: 'image' },
-];
-const MCQ_SECTIONS = [
-  { id: 'qbank', title: 'Q-Bank', subtitle: 'Practice topic-wise MCQs at your own pace.', icon: 'question-square' },
-  { id: 'testSeries', title: 'Test Series', subtitle: 'Grand, subject-wise, and image-based tests.', icon: 'clipboard-list' },
-];
 const ALLOWED_HTML_TAGS = new Set([
   'P', 'BR', 'STRONG', 'B', 'EM', 'I', 'U', 'SUB', 'SUP',
   'UL', 'OL', 'LI', 'TABLE', 'THEAD', 'TBODY', 'TR', 'TH', 'TD', 'IMG',
@@ -81,13 +72,6 @@ function questionsForTest(data, test, subject) {
   if (!test.questionSelectionEnabled) return matching;
   const selectedIds = new Set((Array.isArray(test.questionIds) ? test.questionIds : []).map(String));
   return matching.filter(question => selectedIds.has(String(question.id)));
-}
-
-function getTestCategory(test, product) {
-  const label = `${test.title || ''} ${product?.name || ''}`.toLowerCase();
-  if (label.includes('grand')) return 'grand';
-  if (label.includes('image')) return 'image';
-  return 'subject';
 }
 
 function bootstrapIconClass(value) {
@@ -261,7 +245,7 @@ function Quiz({ quiz, onBack, onFinish }) {
             <div><strong>{unanswered}</strong><span>Unanswered</span></div>
             <div><strong>{attempted ? `${Math.round(correctCount / attempted * 100)}%` : '0%'}</strong><span>Accuracy</span></div>
           </div>
-          <button type="button" className="mcq-primary-button" onClick={onBack}>Back to {quiz.mode === 'test' ? 'Test Series' : 'Q-Bank'}</button>
+          <button type="button" className="mcq-primary-button" onClick={onBack}>Back to MCQ Preview</button>
         </div>
         <div className="mcq-review-list">
           <h2>Answer review</h2>
@@ -286,7 +270,11 @@ function Quiz({ quiz, onBack, onFinish }) {
 
   return (
     <section className="mcq-quiz">
-      <Header title={quiz.title} eyebrow={quiz.mode === 'test' ? 'Test Series' : 'Q-Bank practice'} onBack={() => setConfirmLeave(true)} />
+      <Header
+        title={quiz.title}
+        eyebrow={[quiz.productName, quiz.mode === 'test' ? 'Test' : 'Practice'].filter(Boolean).join(' · ')}
+        onBack={() => setConfirmLeave(true)}
+      />
       <div className="mcq-quiz-toolbar">
         <div className="mcq-progress-copy">
           <strong>Question {questionIndex + 1} of {quiz.questions.length}</strong>
@@ -412,7 +400,6 @@ export default function MCQPreviewPage() {
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [selectedSubject, setSelectedSubject] = useState(null);
   const [selectedTopic, setSelectedTopic] = useState(null);
-  const [selectedCategory, setSelectedCategory] = useState(null);
   const [quiz, setQuiz] = useState(null);
   const [completedSubjects, setCompletedSubjects] = useState([]);
 
@@ -432,12 +419,12 @@ export default function MCQPreviewPage() {
     products.some(product => String(product.id) === String(subject.productId)),
   ), [data, products]);
   const tests = useMemo(() => (data?.tests || []).filter(test =>
-    products.some(product => product.id === test.productId) &&
-    subjects.some(subject => subject.id === test.subjectId),
+    products.some(product => String(product.id) === String(test.productId)) &&
+    subjects.some(subject => String(subject.id) === String(test.subjectId)),
   ), [data, products, subjects]);
 
   function startPractice(subject, topic) {
-    const product = products.find(item => item.id === subject.productId);
+    const product = products.find(item => String(item.id) === String(subject.productId));
     const questions = questionsFor(data, subject.productId, subject.name, topic || '');
     if (!questions.length) return;
     setSelectedSubject(subject);
@@ -457,9 +444,9 @@ export default function MCQPreviewPage() {
   }
 
   function startTest(test) {
-    const subject = subjects.find(item => item.id === test.subjectId);
+    const subject = subjects.find(item => String(item.id) === String(test.subjectId));
     if (!subject) return;
-    const product = products.find(item => item.id === test.productId);
+    const product = products.find(item => String(item.id) === String(test.productId));
     const questions = questionsForTest(data, test, subject);
     if (!questions.length) return;
     setQuiz({
@@ -487,9 +474,6 @@ export default function MCQPreviewPage() {
   }
   if (!data) return <main className="mcq-preview"><div className="mcq-loading">Loading Question Bank…</div></main>;
 
-  const activeTests = selectedCategory
-    ? tests.filter(test => getTestCategory(test, products.find(product => product.id === test.productId)) === selectedCategory.id)
-    : [];
   const subjectTopics = selectedSubject?.topics || [];
   const generalCount = selectedSubject
     ? questionsFor(data, selectedSubject.productId, selectedSubject.name, '').length
@@ -500,27 +484,14 @@ export default function MCQPreviewPage() {
       {view === 'quiz' && quiz ? (
         <Quiz
           quiz={quiz}
-          onBack={() => { setQuiz(null); setView(quiz.mode === 'test' ? 'tests' : selectedTopic || selectedSubject?.name ? 'topics' : 'subjects'); }}
+          onBack={() => { setQuiz(null); setView(quiz.mode === 'test' ? 'home' : selectedTopic || selectedSubject?.name ? 'topics' : 'subjects'); }}
           onFinish={finishQuiz}
         />
       ) : view === 'home' ? (
         <section>
-          <Header title="MCQ" eyebrow="Practice and assessment" />
-          <p className="mcq-intro">Choose a question bank for self-paced practice or start a structured test series.</p>
-          <div className="mcq-feature-list">
-            {MCQ_SECTIONS.map(item => (
-              <FeatureCard
-                key={item.id}
-                item={item}
-                onClick={() => setView(item.id === 'qbank' ? 'products' : 'categories')}
-                detail={item.id === 'qbank' ? `${products.length} products available` : `${tests.length} tests available`}
-              />
-            ))}
-          </div>
-        </section>
-      ) : view === 'products' ? (
-        <section>
-          <Header title="Q Bank" eyebrow="Choose a product" onBack={() => setView('home')} />
+          <Header title="MCQ Preview" eyebrow="Question Bank" />
+          <p className="mcq-intro">Choose a product to browse its subjects and topics, or open a saved test.</p>
+          <h2 className="mcq-section-title">Products</h2>
           <div className="mcq-feature-list">
             {products.map(product => {
               const productIconClass = product.showIcon
@@ -542,12 +513,39 @@ export default function MCQPreviewPage() {
                 />
               );
             })}
-            {!products.length && <div className="mcq-empty"><i className="bi bi-journal-x" /><strong>No products available</strong><span>Create and activate a product in Question Bank to preview its questions.</span></div>}
+            {!products.length && <div className="mcq-empty"><i className="bi bi-journal-x" /><strong>No products available</strong><span>Create and activate a product in Question Bank to preview its subjects and topics.</span></div>}
+          </div>
+          <h2 className="mcq-section-title">Saved Tests</h2>
+          <div className="mcq-feature-list">
+            {tests.map(test => {
+              const subject = subjects.find(item => String(item.id) === String(test.subjectId));
+              const product = products.find(item => String(item.id) === String(test.productId));
+              const testQuestions = subject ? questionsForTest(data, test, subject) : [];
+              return (
+                <FeatureCard
+                  key={test.id}
+                  item={{
+                    title: test.title,
+                    subtitle: [product?.name, subject?.name, test.topic].filter(Boolean).join(' · ') || 'Test',
+                    icon: 'clipboard-check',
+                    iconClass: bootstrapIconClass(test.iconBootstrapClass) || undefined,
+                  }}
+                  detail={`${testQuestions.length} questions · ${test.durationEnabled ? `${test.durationMinutes || 60} min` : 'No time limit'} · ${test.isPublished ? 'Published' : 'Draft preview'}`}
+                  onClick={() => startTest(test)}
+                  disabled={!testQuestions.length}
+                />
+              );
+            })}
+            {!tests.length && <div className="mcq-empty"><i className="bi bi-clipboard-x" /><strong>No tests available</strong><span>Create a test from Question Bank to preview it here.</span></div>}
+            {tests.length > 0 && tests.every(test => {
+              const subject = subjects.find(item => String(item.id) === String(test.subjectId));
+              return !subject || !questionsForTest(data, test, subject).length;
+            }) && <div className="mcq-notice"><i className="bi bi-info-circle" />Add active questions with options and correct answers to the tests before previewing them.</div>}
           </div>
         </section>
       ) : view === 'subjects' ? (
         <section>
-          <Header title={selectedProduct?.name || 'Q Bank'} eyebrow="Choose a subject" onBack={() => setView('products')} />
+          <Header title={selectedProduct?.name || 'Product'} eyebrow="Choose a subject" onBack={() => setView('home')} />
           <div className="mcq-card-list">
             {subjects.filter(subject => String(subject.productId) === String(selectedProduct?.id)).map(subject => {
               const count = questionsForSubject(data, selectedProduct.id, subject.name).length;
@@ -565,7 +563,7 @@ export default function MCQPreviewPage() {
         </section>
       ) : view === 'topics' && selectedSubject ? (
         <section>
-          <Header title={selectedSubject.name} eyebrow="Q Bank" onBack={() => setView('subjects')} />
+          <Header title={selectedSubject.name} eyebrow={selectedProduct?.name || 'Product'} onBack={() => setView('subjects')} />
           <p className="mcq-intro">Choose a topic to begin practice. Questions and progress are based on the content in Question Bank.</p>
           <div className="mcq-card-list">
             {generalCount > 0 && (
@@ -594,46 +592,6 @@ export default function MCQPreviewPage() {
             })}
             {!generalCount && !subjectTopics.length && <div className="mcq-empty"><i className="bi bi-inboxes" /><strong>No topics or questions yet</strong><span>Add topics and active questions from the Question Bank admin page.</span></div>}
             {!generalCount && subjectTopics.length > 0 && !subjectTopics.some(topic => questionsFor(data, selectedSubject.productId, selectedSubject.name, topic).length) && <div className="mcq-empty"><i className="bi bi-inboxes" /><strong>No playable questions yet</strong><span>Add questions with options and a correct answer to begin practice.</span></div>}
-          </div>
-        </section>
-      ) : view === 'categories' ? (
-        <section>
-          <Header title="Test Series" eyebrow="Timed assessment" onBack={() => setView('home')} />
-          <div className="mcq-feature-list">
-            {TEST_CATEGORIES.map(category => {
-              const count = tests.filter(test => getTestCategory(test, products.find(product => product.id === test.productId)) === category.id).length;
-              return <FeatureCard key={category.id} item={category} detail={`${count} tests`} onClick={() => { setSelectedCategory(category); setView('tests'); }} />;
-            })}
-          </div>
-        </section>
-      ) : view === 'tests' && selectedCategory ? (
-        <section>
-          <Header title={selectedCategory.title} eyebrow="Test Series" onBack={() => setView('categories')} />
-          <div className="mcq-feature-list">
-            {activeTests.map(test => {
-              const subject = subjects.find(item => item.id === test.subjectId);
-              const product = products.find(item => item.id === test.productId);
-              const testQuestions = subject ? questionsForTest(data, test, subject) : [];
-              return (
-                <FeatureCard
-                  key={test.id}
-                  item={{
-                    title: test.title,
-                    subtitle: [subject?.name, test.topic, product?.name].filter(Boolean).join(' · ') || 'Test',
-                    icon: selectedCategory.icon,
-                    iconClass: bootstrapIconClass(test.iconBootstrapClass) || undefined,
-                  }}
-                  detail={`${testQuestions.length} questions · ${test.durationEnabled ? `${test.durationMinutes || 60} min` : 'No time limit'} · ${test.isPublished ? 'Published' : 'Draft preview'}`}
-                  onClick={() => startTest(test)}
-                  disabled={!testQuestions.length}
-                />
-              );
-            })}
-            {!activeTests.length && <div className="mcq-empty"><i className="bi bi-clipboard-x" /><strong>No tests in this category</strong><span>Create a test from Question Bank. Test names or products containing “Grand” or “Image” are grouped automatically; other tests appear under Subject-wise Test.</span></div>}
-            {activeTests.length > 0 && activeTests.every(test => {
-              const subject = subjects.find(item => item.id === test.subjectId);
-              return !subject || !questionsForTest(data, test, subject).length;
-            }) && <div className="mcq-notice"><i className="bi bi-info-circle" />Add active questions with options and correct answers to the tests before previewing them.</div>}
           </div>
         </section>
       ) : null}
