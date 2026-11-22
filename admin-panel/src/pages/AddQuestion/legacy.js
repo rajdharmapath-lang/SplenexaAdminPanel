@@ -1,5 +1,18 @@
 // Behaviour carried over from the original HTML page.
-export default function init(document, window) {
+import { loadAdminCatalog, saveAdminCatalog } from '../../services/questionBankApi';
+
+export default async function init(document, window) {
+  try {
+    const catalog = await loadAdminCatalog(window);
+    window.sessionStorage.setItem('fmge-question-bank-products', JSON.stringify(catalog.products));
+    window.sessionStorage.setItem('fmge-question-bank-subjects', JSON.stringify(catalog.subjects));
+    window.sessionStorage.setItem('fmge-question-bank-questions', JSON.stringify(catalog.questions));
+  } catch (error) {
+    console.error('Could not load Question Bank data for the question editor.', error);
+    window.alert('Question Bank data could not be loaded. The question editor is unavailable. ' + error.message);
+    return;
+  }
+
   const params = new URLSearchParams(window.location.hash.split('?')[1] || '');
   const editIndex = params.get('edit');
   const isEditing = /^\d+$/.test(editIndex || '');
@@ -318,7 +331,7 @@ export default function init(document, window) {
     drawOptions();
   }
 
-  function saveQuestion(status) {
+  async function saveQuestion(status) {
     const currentSubject = subjectSelect.value;
     const currentTopic = topic || (hasQuestionContext ? '' : topicSelect.value || '');
     const currentProduct = productSelect.value;
@@ -347,6 +360,15 @@ export default function init(document, window) {
       const item = { id: questionId, product: currentProduct, productId, subject: currentSubject, topic: currentTopic, text, questionHtml, explanationHtml, status, options: savedOptions, answer: correctOption };
       if (isEditing) questions[Number(editIndex)] = Object.assign(questions[Number(editIndex)] || {}, item);
       else questions.push(item);
+      try {
+        const products = JSON.parse(window.sessionStorage.getItem('fmge-question-bank-products') || '[]');
+        const subjects = JSON.parse(window.sessionStorage.getItem('fmge-question-bank-subjects') || '[]');
+        await saveAdminCatalog({ products, subjects, questions }, window);
+      } catch (error) {
+        console.error('Could not save the question to the shared Question Bank.', error);
+        window.alert('The question was not saved to the shared database. ' + error.message);
+        return;
+      }
       try {
         window.sessionStorage.setItem('fmge-question-bank-questions', JSON.stringify(questions));
       } catch (error) {

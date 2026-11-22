@@ -100,6 +100,11 @@ function QuestionBankPage() {
             <span className="toggle-track"></span>
             Organize subjects by topics
           </label>
+          <fieldset className="product-access">
+            <legend>Is Review Enabled</legend>
+            <label><input type="radio" name="product-review-enabled" value="true" /> Yes</label>
+            <label><input type="radio" name="product-review-enabled" value="false" defaultChecked /> No</label>
+          </fieldset>
           <label htmlFor="product-icon-code">Bootstrap icon code</label>
           <div className="product-icon-code-field">
             <i id="product-icon-code-preview" className="bi bi-box-seam-fill" aria-hidden="true"></i>

@@ -67,7 +67,10 @@ export default function useLegacyScript(init) {
     const parent = { postMessage: navigateFromMessage };
 
     try {
-      init(doc, win, parent, setTimeoutShim, setIntervalShim);
+      const result = init(doc, win, parent, setTimeoutShim, setIntervalShim);
+      if (result && typeof result.catch === 'function') {
+        result.catch((error) => console.error(`[legacy script] ${error.message}`, error));
+      }
     } catch (error) {
       // The iframe version swallowed script errors (the rest of the page kept working); keep that
       // behaviour so one failing line cannot unmount the whole app.

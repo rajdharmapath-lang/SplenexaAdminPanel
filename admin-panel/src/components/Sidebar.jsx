@@ -1,6 +1,6 @@
 import { NAV_ITEMS } from '../routes';
 
-export default function Sidebar({ route, onNavigate }) {
+export default function Sidebar({ route, onNavigate, onLogout, logoutPending }) {
   return (
     <aside className="constant-sidebar">
       <div className="brand">
@@ -18,6 +18,12 @@ export default function Sidebar({ route, onNavigate }) {
           </button>
         ))}
       </nav>
+      <div className="constant-sidebar-footer">
+        <button className="constant-logout" type="button" onClick={onLogout} disabled={logoutPending}>
+          <i className="bi bi-box-arrow-right" aria-hidden="true" />
+          {logoutPending ? 'Signing Out...' : 'Log Out'}
+        </button>
+      </div>
     </aside>
   );
 }

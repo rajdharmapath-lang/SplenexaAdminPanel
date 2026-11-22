@@ -1,0 +1,38 @@
+html, body, #root { height: 100%; margin: 0; }
+body { background: #d9fbf7; font-family: Poppins, "Segoe UI", Arial, sans-serif; }
+[hidden] { display: none !important; }
+
+.admin-login { min-height: 100%; display: grid; place-items: center; padding: 24px; box-sizing: border-box; background: linear-gradient(135deg, #e8fbfa, #dceaff); }
+.admin-login-card { width: min(390px, 100%); padding: 34px; border: 1px solid #dce8f3; border-radius: 16px; background: #fff; box-shadow: 0 20px 60px rgb(12 56 105 / 14%); box-sizing: border-box; }
+.admin-login-icon { width: 52px; height: 52px; display: grid; place-items: center; border-radius: 14px; color: #fff; background: #075db1; font-size: 24px; }
+.admin-login-card h1 { margin: 20px 0 6px; color: #08235a; font-size: 23px; }
+.admin-login-card > p { margin: 0 0 20px; color: #64748b; font-size: 13px; }
+.admin-login-card label { display: block; margin: 14px 0 6px; color: #183c6a; font-size: 13px; font-weight: 600; }
+.admin-login-card input, .admin-login-card select { width: 100%; height: 42px; padding: 0 11px; border: 1px solid #cbd8e6; border-radius: 7px; background: #fff; font: inherit; box-sizing: border-box; }
+.admin-login-card input:focus, .admin-login-card select:focus { border-color: #1677c8; outline: 2px solid rgb(22 119 200 / 16%); }
+.admin-login-card button { width: 100%; height: 43px; margin-top: 20px; border: 0; border-radius: 7px; color: #fff; background: #075db1; font: 600 14px Poppins, "Segoe UI", Arial, sans-serif; cursor: pointer; }
+.admin-login-card button:disabled { opacity: .65; cursor: wait; }
+.admin-login-card .admin-login-error { margin: 12px 0 0; color: #b42318; font-size: 12px; }
+.admin-login-card .admin-login-success { margin: 12px 0 0; color: #167344; font-size: 12px; }
+.admin-login-card .admin-login-hint { margin: 8px 0 0; color: #64748b; font-size: 11px; }
+.admin-login-card .admin-login-switch { height: auto; margin-top: 12px; padding: 8px; border: 0; color: #075db1; background: transparent; font-size: 13px; }
+
+.page-frame { position: fixed; inset: 0 0 0 232px; container-type: inline-size; contain: layout; background: #d9fbf7; }
+.page-scroller { height: 100%; overflow: auto; }
+
+.constant-sidebar { position: fixed; z-index: 10; inset: 0 auto 0 0; display: flex; flex-direction: column; width: 232px; padding: 26px 10px 24px; color: #fff; background: linear-gradient(180deg, #124aa4 0%, #075db1 47%, #25c3cf 100%); box-sizing: border-box; overflow-y: auto; }
+.constant-sidebar .brand { display: flex; align-items: center; gap: 11px; margin: 0; padding: 0 10px 31px; }
+.constant-sidebar .brand-mark { font-size: 35px; line-height: 1; }
+.constant-sidebar .brand-title { font-size: 29px; font-weight: 700; line-height: 1; }
+.constant-sidebar .brand-subtitle { display: block; margin-top: 3px; color: #45f0d7; font-size: 15px; font-weight: 600; }
+.constant-nav { display: grid; gap: 8px; }
+.constant-nav button { width: 100%; height: 48px; display: flex; align-items: center; gap: 14px; padding: 0 15px; border: 0; border-radius: 11px; color: #fff; background: transparent; font: 600 13px Poppins, "Segoe UI", Arial, sans-serif; text-align: left; cursor: pointer; }
+.constant-nav button:hover { background: rgb(255 255 255 / 12%); }
+.constant-nav button.active { color: #08235a; background: linear-gradient(90deg, #8ff3e8, #5fe0e3); }
+.constant-nav button:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+.constant-nav button i { width: 25px; text-align: center; font-size: 22px; }
+.constant-sidebar-footer { margin-top: auto; padding-top: 20px; }
+.constant-sidebar-footer .constant-logout { width: 100%; height: 46px; display: flex; align-items: center; gap: 14px; padding: 0 15px; border: 1px solid rgb(255 255 255 / 28%); border-radius: 11px; color: #fff; background: rgb(7 35 90 / 18%); font: 600 13px Poppins, "Segoe UI", Arial, sans-serif; text-align: left; cursor: pointer; }
+.constant-sidebar-footer .constant-logout:hover { background: rgb(255 255 255 / 15%); }
+.constant-sidebar-footer .constant-logout:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+.constant-sidebar-footer .constant-logout i { width: 25px; text-align: center; font-size: 20px; }
