@@ -38,6 +38,42 @@ function getRequestId(data) {
   return null;
 }
 
+function getProviderDetails(data, endpoint, httpStatus) {
+  const results = [data?.data, data].filter((result) =>
+    result && typeof result === 'object' && !Array.isArray(result)
+  );
+  const rawCode = results.map((result) => result.code || result.errorCode || result.error_code)
+    .find((value) => typeof value === 'string' || typeof value === 'number');
+  const providerCode = rawCode === undefined
+    ? undefined
+    : String(rawCode).slice(0, 60).replace(/[^A-Za-z0-9_.-]/g, '');
+  const rawState = results.map((result) => result.type || result.status)
+    .find((value) => typeof value === 'string');
+  const providerState = rawState?.slice(0, 40).replace(/[^A-Za-z0-9 _.-]/g, '');
+  const rawMessage = results.map((result) => result.message || result.error)
+    .find((value) => typeof value === 'string');
+  let providerMessage;
+  if (rawMessage) {
+    const trimmedMessage = rawMessage.trim();
+    if (!/^[A-Za-z0-9_-]{8,}$/.test(trimmedMessage)) {
+      providerMessage = trimmedMessage
+        .replace(/\+?\d[\d\s().-]{6,}\d/g, (value) => {
+          const digits = value.replace(/\D/g, '');
+          return `***${digits.slice(-4)}`;
+        })
+        .replace(/\b(authkey|authorization|token)\b(\s*[:=]\s*)[^\s,;]+/gi, '$1$2[redacted]')
+        .slice(0, 180);
+    }
+  }
+  return {
+    providerOperation: endpoint,
+    providerHttpStatus: httpStatus,
+    ...(providerCode ? { providerCode } : {}),
+    ...(providerState ? { providerState } : {}),
+    ...(providerMessage ? { providerMessage } : {}),
+  };
+}
+
 async function requestJson(endpoint, payload) {
   const { authKey } = getConfig();
   let response;
@@ -77,18 +113,20 @@ async function requestJson(endpoint, payload) {
     const error = new Error('MSG91 rejected the OTP request.');
     error.code = 'MSG91_PROVIDER_ERROR';
     error.status = response.status;
+    Object.assign(error, getProviderDetails(data, endpoint, response.status));
     throw error;
   }
-  return data;
+  return { data, httpStatus: response.status };
 }
 
 async function sendOtp(identifier) {
   const { widgetId } = getConfig();
-  const data = await requestJson('/sendOtp', { widgetId, identifier });
+  const { data, httpStatus } = await requestJson('/sendOtp', { widgetId, identifier });
   const requestId = getRequestId(data);
   if (!isSuccessful(data) || !requestId) {
     const error = new Error('MSG91 did not accept the OTP request.');
     error.code = 'MSG91_PROVIDER_REJECTED';
+    Object.assign(error, getProviderDetails(data, '/sendOtp', httpStatus));
     throw error;
   }
   return requestId;
@@ -100,17 +138,18 @@ async function retryOtp(requestId, retryChannel) {
   if (retryChannel) {
     payload.retryChannel = retryChannel;
   }
-  const data = await requestJson('/retryOtp', payload);
+  const { data, httpStatus } = await requestJson('/retryOtp', payload);
   if (!isSuccessful(data)) {
     const error = new Error('MSG91 could not resend the OTP.');
     error.code = 'MSG91_PROVIDER_REJECTED';
+    Object.assign(error, getProviderDetails(data, '/retryOtp', httpStatus));
     throw error;
   }
 }
 
 async function verifyOtp(requestId, otp) {
   const { widgetId } = getConfig();
-  const data = await requestJson('/verifyOtp', { widgetId, reqId: requestId, otp });
+  const { data } = await requestJson('/verifyOtp', { widgetId, reqId: requestId, otp });
   return isSuccessful(data);
 }
 

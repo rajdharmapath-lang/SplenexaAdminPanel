@@ -1,6 +1,7 @@
 import { memo } from 'react';
 import useLegacyScript from '../../legacy/useLegacyScript';
 import init from './legacy';
+import AccountMenu from '../../components/AccountMenu';
 import './styles.css';
 
 function PaymentsPage() {
@@ -36,22 +37,7 @@ function PaymentsPage() {
                 </p>
               </div>
             </div>
-            <button className="profile-button" id="profile-button" type="button" aria-label="Admin profile">
-              <span className="avatar" aria-hidden="true">
-                A
-              </span>
-              <span className="profile-copy">
-                <strong>
-                  Admin
-                </strong>
-                <span>
-                  Super Admin
-                </span>
-              </span>
-              <svg className="profile-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="m7 10 5 5 5-5"></path>
-              </svg>
-            </button>
+            <AccountMenu />
           </header>
           <div className="page-content">
             <section className="page-heading" aria-labelledby="page-title">

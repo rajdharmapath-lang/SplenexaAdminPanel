@@ -1,8 +1,10 @@
 import { Suspense, useEffect, useState } from 'react';
 import Sidebar from './components/Sidebar';
+import { AdminSessionProvider } from './context/AdminSessionContext';
 import { PAGES, navigate, routeFromHash } from './routes';
 import {
   clearAdminSession,
+  getAdminUser,
   hasAdminSession,
   loginAdmin,
   logoutAdmin,
@@ -15,6 +17,7 @@ const SESSION_EXPIRED_EVENT = 'splenexa-admin-session-expired';
 export default function App() {
   const [route, setRoute] = useState(routeFromHash);
   const [authenticated, setAuthenticated] = useState(() => hasAdminSession(window));
+  const [user, setUser] = useState(() => getAdminUser(window));
   const [authLoading, setAuthLoading] = useState(() => hasAdminSession(window));
   const [loginError, setLoginError] = useState('');
   const [loginPending, setLoginPending] = useState(false);
@@ -32,6 +35,7 @@ export default function App() {
     const onSessionExpired = () => {
       clearAdminSession(window);
       setAuthenticated(false);
+      setUser(null);
       setLoginError('Your session expired. Please sign in again.');
     };
     window.addEventListener(SESSION_EXPIRED_EVENT, onSessionExpired);
@@ -43,9 +47,13 @@ export default function App() {
       return;
     }
     verifyAdminSession(window)
-      .then(setAuthenticated)
+      .then((verifiedUser) => {
+        setUser(verifiedUser);
+        setAuthenticated(true);
+      })
       .catch((error) => {
         setAuthenticated(false);
+        setUser(null);
         if (error.status !== 401) {
           setLoginError(error.message);
         }
@@ -77,7 +85,8 @@ export default function App() {
         form.reset();
         form.elements.namedItem('email').value = signupEmail;
       } else {
-        await loginAdmin(formData.get('email'), formData.get('password'), window);
+        const signedInUser = await loginAdmin(formData.get('email'), formData.get('password'), window);
+        setUser(signedInUser);
         setAuthenticated(true);
         form.reset();
       }
@@ -99,6 +108,7 @@ export default function App() {
     } finally {
       clearAdminSession(window);
       setAuthenticated(false);
+      setUser(null);
       setAuthMode('login');
       setSignupNotice('');
       setLogoutPending(false);
@@ -185,15 +195,17 @@ export default function App() {
 
   const Page = PAGES[route];
   return (
-    <>
-      <Sidebar route={route} onNavigate={navigate} onLogout={handleLogout} logoutPending={logoutPending} />
-      {/* page-frame is the size container for @container rules and the containing block for the
-          pages' fixed overlays; page-scroller is the scroll area (same layout as the old iframe). */}
-      <div className="page-frame">
-        <div className="page-scroller" id="page-scroller">
-          <Suspense fallback={null}><Page key={route} /></Suspense>
+    <AdminSessionProvider value={{ user, onLogout: handleLogout, logoutPending }}>
+      <>
+        <Sidebar route={route} onNavigate={navigate} />
+        {/* page-frame is the size container for @container rules and the containing block for the
+            pages' fixed overlays; page-scroller is the scroll area (same layout as the old iframe). */}
+        <div className="page-frame">
+          <div className="page-scroller" id="page-scroller">
+            <Suspense fallback={null}><Page key={route} /></Suspense>
+          </div>
         </div>
-      </div>
-    </>
+      </>
+    </AdminSessionProvider>
   );
 }

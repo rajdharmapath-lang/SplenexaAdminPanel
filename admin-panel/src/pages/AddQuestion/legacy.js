@@ -27,7 +27,7 @@ export default async function init(document, window) {
   };
   const existingQuestion = readQuestion();
   const product = existingQuestion?.product || params.get('product') || '';
-  const productId = existingQuestion?.productId || params.get('productId') || '';
+  let productId = existingQuestion?.productId || params.get('productId') || '';
   const subject = existingQuestion?.subject || params.get('subject') || '';
   const topic = existingQuestion?.topic || params.get('topic') || '';
   const hasQuestionContext = Boolean(product && subject);
@@ -290,7 +290,7 @@ export default async function init(document, window) {
   });
 
   const options = ['', '', '', ''];
-  let correctOption = 1;
+  let correctOption = null;
   const optionBox = document.getElementById('opts');
   function escapeHtml(value) {
     return String(value).replace(/[&<>"']/g, character => ({
@@ -303,8 +303,10 @@ export default async function init(document, window) {
   }
   function drawOptions() {
     optionBox.innerHTML = options.map((option, index) => `<div class="op ${index === correctOption ? 'sel' : ''}" data-i="${index}"><label class="option-label"><input type="radio" name="correct-option" ${index === correctOption ? 'checked' : ''}> Option ${index + 1}</label><div class="option-editor"><textarea class="option-body" placeholder="Enter option ${index + 1} text...">${escapeHtml(option)}</textarea></div></div>`).join('');
-    const answerText = options[correctOption].trim();
-    document.getElementById('ans').textContent = `Option ${correctOption + 1}${answerText ? ` (${answerText})` : ''}`;
+    const answerText = correctOption === null ? '' : options[correctOption].trim();
+    document.getElementById('ans').textContent = correctOption === null
+      ? 'Not selected'
+      : `Option ${correctOption + 1}${answerText ? ` (${answerText})` : ''}`;
   }
   optionBox.addEventListener('click', event => {
     const option = event.target.closest('.op');
@@ -325,10 +327,22 @@ export default async function init(document, window) {
     if (!existingQuestion.questionHtml) questionEditor.textContent = existingQuestion.text || '';
     document.querySelector('.edit-question-card .body.e').innerHTML = existingQuestion.explanationHtml || '';
     (existingQuestion.options || []).forEach((option, index) => { options[index] = option; });
-    correctOption = typeof existingQuestion.answer === 'number' ? existingQuestion.answer : correctOption;
+    correctOption = Number.isInteger(existingQuestion.answer) ? existingQuestion.answer : null;
     const status = document.getElementById('question-status');
     if (status && existingQuestion.status) status.value = existingQuestion.status;
+    const difficulty = document.getElementById('difficulty');
+    if (difficulty && existingQuestion.difficulty) difficulty.value = existingQuestion.difficulty;
+    const tagsInput = document.getElementById('question-tags');
+    if (tagsInput && Array.isArray(existingQuestion.tags)) tagsInput.value = existingQuestion.tags.join(', ');
     drawOptions();
+  }
+
+  function questionUniqueKey(question) {
+    const text = String(question.text || '').trim();
+    if (text && text.toLowerCase() !== 'image-based question') {
+      return text.toLowerCase().replace(/\s+/g, ' ');
+    }
+    return String(question.questionHtml || '').replace(/\s+/g, '').trim();
   }
 
   async function saveQuestion(status) {
@@ -340,6 +354,30 @@ export default async function init(document, window) {
     const text = questionEditor?.textContent.trim() || (questionHtml ? 'Image-based question' : '');
     const explanationHtml = document.querySelector('.edit-question-card .body.e')?.innerHTML.trim() || '';
     const savedOptions = options.map(option => option.trim());
+    const tagsInput = document.getElementById('question-tags');
+    const tags = [];
+    const seenTags = new Set();
+    String(tagsInput?.value || '').split(',').forEach(value => {
+      const tag = value.trim();
+      const normalizedTag = tag.toLowerCase();
+      if (tag && !seenTags.has(normalizedTag)) {
+        tags.push(tag);
+        seenTags.add(normalizedTag);
+      }
+    });
+    if (
+      !currentSubject ||
+      !questionHtml ||
+      !text ||
+      (text === 'Image-based question' && !/<img\b/i.test(questionHtml))
+    ) {
+      window.alert('Enter the question text and select a subject before saving.');
+      return;
+    }
+    if (savedOptions.length !== 4 || savedOptions.some(option => !option)) {
+      window.alert('Enter text for all four answer options.');
+      return;
+    }
     if (currentSubject && questionHtml) {
       let questions;
       try {
@@ -357,11 +395,52 @@ export default async function init(document, window) {
       const questionId = existingQuestion?.id || (window.crypto && typeof window.crypto.randomUUID === 'function'
         ? window.crypto.randomUUID()
         : 'question-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2));
-      const item = { id: questionId, product: currentProduct, productId, subject: currentSubject, topic: currentTopic, text, questionHtml, explanationHtml, status, options: savedOptions, answer: correctOption };
+      let products;
+      try {
+        products = JSON.parse(window.sessionStorage.getItem('fmge-question-bank-products') || '[]');
+      } catch (error) {
+        console.error('Could not load products before saving the question.', error);
+        window.alert('The selected product could not be verified. The question was not saved.');
+        return;
+      }
+      if (!Array.isArray(products)) {
+        window.alert('The selected product could not be verified. The question was not saved.');
+        return;
+      }
+      const selectedProduct = products.find(item => item.name === currentProduct);
+      productId = productId || selectedProduct?.id || '';
+      if (!productId) {
+        window.alert('Select a product before saving the question.');
+        return;
+      }
+      const item = {
+        id: questionId,
+        product: currentProduct,
+        productId,
+        subject: currentSubject,
+        topic: currentTopic,
+        difficulty: document.getElementById('difficulty').value,
+        status,
+        tags,
+        text,
+        questionHtml,
+        explanationHtml,
+        options: savedOptions,
+        answer: correctOption,
+      };
+      const uniqueKey = questionUniqueKey(item);
+      const duplicateQuestion = questions.find(question =>
+        String(question.id) !== String(questionId) &&
+        uniqueKey &&
+        questionUniqueKey(question) === uniqueKey,
+      );
+      if (duplicateQuestion) {
+        window.alert('A question with this text already exists in the Question Bank. Questions must be unique.');
+        return;
+      }
       if (isEditing) questions[Number(editIndex)] = Object.assign(questions[Number(editIndex)] || {}, item);
       else questions.push(item);
       try {
-        const products = JSON.parse(window.sessionStorage.getItem('fmge-question-bank-products') || '[]');
         const subjects = JSON.parse(window.sessionStorage.getItem('fmge-question-bank-subjects') || '[]');
         await saveAdminCatalog({ products, subjects, questions }, window);
       } catch (error) {

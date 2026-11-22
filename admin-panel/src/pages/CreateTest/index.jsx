@@ -1,6 +1,7 @@
 import { memo } from 'react';
 import useLegacyScript from '../../legacy/useLegacyScript';
 import init from './legacy';
+import AccountMenu from '../../components/AccountMenu';
 import './styles.css';
 
 function CreateTestPage() {
@@ -20,18 +21,7 @@ function CreateTestPage() {
                 3
               </em>
             </div>
-            <div className="me">
-              <div className="av">
-                A
-              </div>
-              <div>
-                <b>
-                  Admin
-                </b>
-                Super Admin
-              </div>
-              <i className="bi bi-chevron-down"></i>
-            </div>
+            <AccountMenu />
           </div>
         </div>
         <div className="wrap">
@@ -146,7 +136,7 @@ function CreateTestPage() {
             <div className="g2">
               <div className="dtb">
                 <div className="dh">
-                  <label className="f">
+                  <label className="f" htmlFor="test-start-date">
                     Start Date &amp; Time
                     {" "}
                     <s>
@@ -155,7 +145,7 @@ function CreateTestPage() {
                   </label>
                   <div className="en">
                     <label className="sw">
-                      <input type="checkbox" defaultChecked />
+                      <input id="test-start-enabled" type="checkbox" defaultChecked />
                       <span></span>
                     </label>
                     Enable
@@ -164,18 +154,18 @@ function CreateTestPage() {
                 <div className="dr">
                   <label>
                     <i className="bi bi-calendar3"></i>
-                    <input placeholder="Select date" onFocus={(event) => { (function () { this.type='date' }).call(event.currentTarget); }} onBlur={(event) => { (function () { if(!this.value)this.type='text' }).call(event.currentTarget); }} />
+                    <input id="test-start-date" placeholder="Select date" onFocus={(event) => { (function () { this.type='date' }).call(event.currentTarget); }} onBlur={(event) => { (function () { if(!this.value)this.type='text' }).call(event.currentTarget); }} />
                   </label>
                   <label>
                     <i className="bi bi-clock"></i>
-                    <input placeholder="Select time" onFocus={(event) => { (function () { this.type='time' }).call(event.currentTarget); }} onBlur={(event) => { (function () { if(!this.value)this.type='text' }).call(event.currentTarget); }} />
+                    <input id="test-start-time" placeholder="Select time" onFocus={(event) => { (function () { this.type='time' }).call(event.currentTarget); }} onBlur={(event) => { (function () { if(!this.value)this.type='text' }).call(event.currentTarget); }} />
                     <i className="bi bi-chevron-down ch"></i>
                   </label>
                 </div>
               </div>
               <div className="dtb">
                 <div className="dh">
-                  <label className="f">
+                  <label className="f" htmlFor="test-end-date">
                     End Date &amp; Time
                     {" "}
                     <s>
@@ -184,7 +174,7 @@ function CreateTestPage() {
                   </label>
                   <div className="en">
                     <label className="sw">
-                      <input type="checkbox" defaultChecked />
+                      <input id="test-end-enabled" type="checkbox" defaultChecked />
                       <span></span>
                     </label>
                     Enable
@@ -193,11 +183,11 @@ function CreateTestPage() {
                 <div className="dr">
                   <label>
                     <i className="bi bi-calendar3"></i>
-                    <input placeholder="Select date" onFocus={(event) => { (function () { this.type='date' }).call(event.currentTarget); }} onBlur={(event) => { (function () { if(!this.value)this.type='text' }).call(event.currentTarget); }} />
+                    <input id="test-end-date" placeholder="Select date" onFocus={(event) => { (function () { this.type='date' }).call(event.currentTarget); }} onBlur={(event) => { (function () { if(!this.value)this.type='text' }).call(event.currentTarget); }} />
                   </label>
                   <label>
                     <i className="bi bi-clock"></i>
-                    <input placeholder="Select time" onFocus={(event) => { (function () { this.type='time' }).call(event.currentTarget); }} onBlur={(event) => { (function () { if(!this.value)this.type='text' }).call(event.currentTarget); }} />
+                    <input id="test-end-time" placeholder="Select time" onFocus={(event) => { (function () { this.type='time' }).call(event.currentTarget); }} onBlur={(event) => { (function () { if(!this.value)this.type='text' }).call(event.currentTarget); }} />
                     <i className="bi bi-chevron-down ch"></i>
                   </label>
                 </div>

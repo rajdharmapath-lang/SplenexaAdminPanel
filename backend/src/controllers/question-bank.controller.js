@@ -48,6 +48,16 @@ function sendAccountTableSetupError(res, message) {
   });
 }
 
+function toPublicAccount(account) {
+  return {
+    id: account.admin_id,
+    firstName: account.first_name,
+    lastName: account.last_name,
+    professional: account.professional,
+    email: account.email,
+  };
+}
+
 async function signUpAdmin(req, res, next) {
   const result = getSignupAccount(req.body);
   if (result.error) {
@@ -103,7 +113,7 @@ async function loginAdmin(req, res, next) {
       adminId: account.admin_id,
       expiresAt,
     });
-    return res.json({ token });
+    return res.json({ token, user: toPublicAccount(account) });
   } catch (error) {
     if (isAdminAuthTableMissing(error)) {
       return sendAccountTableSetupError(
@@ -111,6 +121,18 @@ async function loginAdmin(req, res, next) {
         'Admin login is not set up yet. Apply the admin account and session migrations in Supabase.',
       );
     }
+    return next(error);
+  }
+}
+
+async function getAdminSession(req, res, next) {
+  try {
+    const account = await adminAccountRepository.getAdminAccountById(req.adminSession.admin_id);
+    if (!account) {
+      return res.status(401).json({ message: 'Account no longer exists.' });
+    }
+    return res.json({ authenticated: true, user: toPublicAccount(account) });
+  } catch (error) {
     return next(error);
   }
 }
@@ -131,9 +153,11 @@ function isCatalog(catalog) {
     Array.isArray(catalog.products) &&
     Array.isArray(catalog.subjects) &&
     Array.isArray(catalog.questions) &&
+    (catalog.tests === undefined || Array.isArray(catalog.tests)) &&
     catalog.products.length <= 5000 &&
     catalog.subjects.length <= 20000 &&
-    catalog.questions.length <= 50000;
+    catalog.questions.length <= 50000 &&
+    (catalog.tests?.length ?? 0) <= 5000;
 }
 
 async function getPublicCatalog(_req, res, next) {
@@ -148,6 +172,7 @@ async function getPublicCatalog(_req, res, next) {
         activeProductIds.has(String(question?.productId)) &&
         String(question?.status || 'Active').toLowerCase() === 'active',
       ),
+      tests: catalog.tests.filter((test) => activeProductIds.has(String(test?.productId))),
     });
   } catch (error) {
     return next(error);
@@ -174,9 +199,16 @@ async function saveAdminCatalog(req, res, next) {
       products: req.body.products,
       subjects: req.body.subjects,
       questions: req.body.questions,
+      tests: req.body.tests,
     });
     return res.json(catalog);
   } catch (error) {
+    if (
+      error.code === '23505' &&
+      error.message === 'Question text must be unique across the Question Bank.'
+    ) {
+      return res.status(409).json({ message: error.message });
+    }
     return next(error);
   }
 }
@@ -184,6 +216,7 @@ async function saveAdminCatalog(req, res, next) {
 module.exports = {
   signUpAdmin,
   loginAdmin,
+  getAdminSession,
   logoutAdmin,
   getPublicCatalog,
   getAdminCatalog,

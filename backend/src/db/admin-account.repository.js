@@ -1,6 +1,7 @@
 const supabase = require('./supabase');
 
 const ACCOUNT_FIELDS = 'admin_id, first_name, last_name, professional, mobile, email, password_hash';
+const PUBLIC_ACCOUNT_FIELDS = 'admin_id, first_name, last_name, professional, email';
 
 async function createAdminAccount(account) {
   const { data, error } = await supabase
@@ -35,4 +36,17 @@ async function getAdminAccountByEmail(email) {
   return data;
 }
 
-module.exports = { createAdminAccount, getAdminAccountByEmail };
+async function getAdminAccountById(adminId) {
+  const { data, error } = await supabase
+    .getClient()
+    .from('admin_accounts')
+    .select(PUBLIC_ACCOUNT_FIELDS)
+    .eq('admin_id', adminId)
+    .maybeSingle();
+  if (error) {
+    throw error;
+  }
+  return data;
+}
+
+module.exports = { createAdminAccount, getAdminAccountByEmail, getAdminAccountById };

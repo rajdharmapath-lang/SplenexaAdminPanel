@@ -25,7 +25,7 @@ router.get('/', questionBankController.getPublicCatalog);
 adminRouter.post('/login', loginRateLimit, questionBankController.loginAdmin);
 adminRouter.post('/signup', signupRateLimit, questionBankController.signUpAdmin);
 adminRouter.use(requireQuestionBankAdmin);
-adminRouter.get('/session', (_req, res) => res.json({ authenticated: true }));
+adminRouter.get('/session', questionBankController.getAdminSession);
 adminRouter.post('/logout', questionBankController.logoutAdmin);
 adminRouter.get('/', questionBankController.getAdminCatalog);
 adminRouter.put('/', questionBankController.saveAdminCatalog);

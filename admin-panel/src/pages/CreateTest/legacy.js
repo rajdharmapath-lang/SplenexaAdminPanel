@@ -1,5 +1,7 @@
 // Behaviour carried over from the original HTML page.
-export default function init(document, window) {
+import { loadAdminCatalog, saveAdminCatalog } from '../../services/questionBankApi';
+
+export default async function init(document, window) {
   const $ = id => document.getElementById(id);
   const params = new URLSearchParams(window.location.hash.split('?')[1] || '');
   const productIdParam = params.get('productId') || '';
@@ -21,15 +23,29 @@ export default function init(document, window) {
   let questions = [];
   let tests = [];
   try {
-    products = JSON.parse(window.sessionStorage.getItem('fmge-question-bank-products') || '[]');
-    subjects = JSON.parse(window.sessionStorage.getItem('fmge-question-bank-subjects') || '[]');
-    questions = JSON.parse(window.sessionStorage.getItem('fmge-question-bank-questions') || '[]');
-    tests = JSON.parse(window.sessionStorage.getItem('fmge-question-bank-tests') || '[]');
+    const cachedCatalog = {
+      products: JSON.parse(window.sessionStorage.getItem('fmge-question-bank-products') || '[]'),
+      subjects: JSON.parse(window.sessionStorage.getItem('fmge-question-bank-subjects') || '[]'),
+      questions: JSON.parse(window.sessionStorage.getItem('fmge-question-bank-questions') || '[]'),
+      tests: JSON.parse(window.sessionStorage.getItem('fmge-question-bank-tests') || '[]'),
+    };
+    const catalog = await loadAdminCatalog(window);
+    const remoteHasContent = catalog.products.length || catalog.subjects.length || catalog.questions.length;
+    const source = !remoteHasContent && (cachedCatalog.products.length || cachedCatalog.subjects.length || cachedCatalog.questions.length)
+      ? cachedCatalog
+      : catalog;
+    products = source.products;
+    subjects = source.subjects;
+    questions = source.questions;
+    tests = catalog.tests.length ? catalog.tests : cachedCatalog.tests;
+    window.sessionStorage.setItem('fmge-question-bank-products', JSON.stringify(products));
+    window.sessionStorage.setItem('fmge-question-bank-subjects', JSON.stringify(subjects));
+    window.sessionStorage.setItem('fmge-question-bank-questions', JSON.stringify(questions));
+    window.sessionStorage.setItem('fmge-question-bank-tests', JSON.stringify(tests));
   } catch (error) {
-    products = [];
-    subjects = [];
-    questions = [];
-    tests = [];
+    console.error('Could not load Question Bank data before creating a test.', error);
+    window.alert('Question Bank data could not be loaded from the shared database. ' + error.message);
+    return;
   }
   const selectedProduct = products.find(product => product.id === productIdParam || product.name === productParam);
   const topicsEnabled = selectedProduct
@@ -293,7 +309,41 @@ export default function init(document, window) {
     window.sessionStorage.setItem('fmge-question-bank-subjects', JSON.stringify(subjects));
   }
 
-  $('create-test-submit').onclick = () => {
+  function getDateTime(dateId, timeId, enabled, label) {
+    const dateInput = $(dateId);
+    const timeInput = $(timeId);
+    dateInput.setCustomValidity('');
+    timeInput.setCustomValidity('');
+    if (!enabled) return null;
+    if (!dateInput.value) {
+      dateInput.setCustomValidity('Select a ' + label + ' date.');
+      dateInput.reportValidity();
+      return undefined;
+    }
+    if (!timeInput.value) {
+      timeInput.setCustomValidity('Select a ' + label + ' time.');
+      timeInput.reportValidity();
+      return undefined;
+    }
+    const dateTime = new Date(dateInput.value + 'T' + timeInput.value);
+    if (Number.isNaN(dateTime.getTime())) {
+      dateInput.setCustomValidity('Select a valid ' + label + ' date and time.');
+      dateInput.reportValidity();
+      return undefined;
+    }
+    return dateTime.toISOString();
+  }
+
+  $('test-start-enabled').addEventListener('change', function () {
+    $('test-start-date').disabled = !$('test-start-enabled').checked;
+    $('test-start-time').disabled = !$('test-start-enabled').checked;
+  });
+  $('test-end-enabled').addEventListener('change', function () {
+    $('test-end-date').disabled = !$('test-end-enabled').checked;
+    $('test-end-time').disabled = !$('test-end-enabled').checked;
+  });
+
+  $('create-test-submit').onclick = async () => {
     const product = productSelect.value;
     const currentProductId = selectedProductId();
     const name = $('test-name').value.trim();
@@ -326,6 +376,21 @@ export default function init(document, window) {
       $('topic-icon-code').reportValidity();
       return;
     }
+    let startAt = null;
+    let endAt = null;
+    const startDateTimeEnabled = !isTopicMode && $('test-start-enabled').checked;
+    const endDateTimeEnabled = !isTopicMode && $('test-end-enabled').checked;
+    if (!isTopicMode) {
+      startAt = getDateTime('test-start-date', 'test-start-time', startDateTimeEnabled, 'start');
+      if (startAt === undefined) return;
+      endAt = getDateTime('test-end-date', 'test-end-time', endDateTimeEnabled, 'end');
+      if (endAt === undefined) return;
+      if (startAt && endAt && new Date(endAt) <= new Date(startAt)) {
+        $('test-end-date').setCustomValidity('The end date and time must be after the start date and time.');
+        $('test-end-date').reportValidity();
+        return;
+      }
+    }
     const durationMinutes = Number($('hh').value) * 60 + Number($('mm').value);
     if (durationToggle.checked && durationMinutes < 1) {
       window.alert('Set a test duration greater than zero, or turn off the time limit.');
@@ -346,6 +411,20 @@ export default function init(document, window) {
     if (topicName && topicIconClass) subject.topicIcons[topicName] = topicIconClass;
     saveSubjects();
 
+    if (isTopicMode) {
+      try {
+        await saveAdminCatalog({ products, subjects, questions, tests }, window);
+      } catch (error) {
+        console.error('Could not save the topic to the shared Question Bank.', error);
+        window.alert('The topic was not saved to the shared database. ' + error.message);
+        return;
+      }
+      const query = new URLSearchParams({ productId: currentProductId, product: product, subject: subjectName });
+      if (topicName) query.set('topic', topicName);
+      window.location.hash = 'fmge-question-bank?' + query.toString();
+      return;
+    }
+
     const totalQuestions = selectedQuestionIds.length;
     const marksPerQuestion = $('marks-enabled').checked ? Math.max(0, Number($('marks-per-question').value) || 0) : 0;
     const negativeMarking = $('negative-marking-enabled').checked ? Math.max(0, Number($('negative-marking').value) || 0) : 0;
@@ -353,9 +432,11 @@ export default function init(document, window) {
       id: makeId(),
       productId: currentProductId,
       title: name,
-      iconBootstrapClass: isTopicMode ? '' : testIconClass,
+      iconBootstrapClass: testIconClass,
+      addTopicUnderTest: useTopic,
       subjectId: subject.id,
       topic: topicName || null,
+      topicIconBootstrapClass: topicName ? topicIconClass : '',
       questionIds: [...selectedQuestionIds],
       questionSelectionEnabled: matchingQuestions(questionScope()).length > 0 || questionSelectionWasChanged,
       totalQuestions: totalQuestions,
@@ -364,13 +445,26 @@ export default function init(document, window) {
       marksEnabled: $('marks-enabled').checked,
       negativeMarking: negativeMarking,
       negativeMarkingEnabled: $('negative-marking-enabled').checked,
+      startDateTimeEnabled: startDateTimeEnabled,
+      startAt: startAt,
+      endDateTimeEnabled: endDateTimeEnabled,
+      endAt: endAt,
       durationEnabled: durationToggle.checked,
       durationMinutes: durationToggle.checked ? durationMinutes : null,
       isPublished: false,
       createdAt: new Date().toISOString()
     };
-    tests.push(test);
+    tests = tests.concat(test);
     window.sessionStorage.setItem('fmge-question-bank-tests', JSON.stringify(tests));
+    try {
+      await saveAdminCatalog({ products, subjects, questions, tests }, window);
+    } catch (error) {
+      tests = tests.filter(function (savedTest) { return savedTest.id !== test.id; });
+      window.sessionStorage.setItem('fmge-question-bank-tests', JSON.stringify(tests));
+      console.error('Could not save the test to the shared Question Bank.', error);
+      window.alert('The test was not saved to the shared database. ' + error.message);
+      return;
+    }
     const query = new URLSearchParams({ productId: currentProductId, product: product, subject: subjectName });
     if (topicName) query.set('topic', topicName);
     window.location.hash = 'fmge-question-bank?' + query.toString();

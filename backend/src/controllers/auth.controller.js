@@ -11,6 +11,16 @@ function hasValidPhone(body) {
   );
 }
 
+function logMsg91Failure(operation, error) {
+  console.error(`MSG91 ${operation} OTP failed:`, error.code, {
+    providerOperation: error.providerOperation,
+    providerHttpStatus: error.providerHttpStatus,
+    providerCode: error.providerCode,
+    providerState: error.providerState,
+    providerMessage: error.providerMessage,
+  });
+}
+
 async function sendOtp(req, res, next) {
   if (!hasValidPhone(req.body)) {
     return res.status(400).json({ message: 'Enter a valid phone number and dial code.' });
@@ -23,8 +33,12 @@ async function sendOtp(req, res, next) {
       return res.status(503).json({ message: error.message });
     }
     if (error.code?.startsWith('MSG91_')) {
-      console.error('MSG91 send OTP failed:', error.code);
-      return res.status(502).json({ message: 'Could not send the verification code.' });
+      logMsg91Failure('send', error);
+      return res.status(502).json({
+        message: error.providerMessage
+          ? `Could not send the verification code: ${error.providerMessage}`
+          : 'Could not send the verification code. Check the backend MSG91 diagnostic log.',
+      });
     }
     return next(error);
   }
@@ -49,8 +63,12 @@ async function retryOtp(req, res, next) {
       return res.status(503).json({ message: error.message });
     }
     if (error.code?.startsWith('MSG91_')) {
-      console.error('MSG91 retry OTP failed:', error.code);
-      return res.status(502).json({ message: 'Could not resend the verification code.' });
+      logMsg91Failure('retry', error);
+      return res.status(502).json({
+        message: error.providerMessage
+          ? `Could not resend the verification code: ${error.providerMessage}`
+          : 'Could not resend the verification code. Check the backend MSG91 diagnostic log.',
+      });
     }
     return next(error);
   }
@@ -77,8 +95,12 @@ async function verifyOtp(req, res, next) {
       return res.status(503).json({ message: error.message });
     }
     if (error.code?.startsWith('MSG91_')) {
-      console.error('MSG91 verify OTP failed:', error.code);
-      return res.status(502).json({ message: 'Could not verify the code.' });
+      logMsg91Failure('verify', error);
+      return res.status(502).json({
+        message: error.providerMessage
+          ? `Could not verify the code: ${error.providerMessage}`
+          : 'Could not verify the code. Check the backend MSG91 diagnostic log.',
+      });
     }
     return next(error);
   }

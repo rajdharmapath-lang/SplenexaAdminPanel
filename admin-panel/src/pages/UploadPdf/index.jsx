@@ -1,6 +1,7 @@
 import { memo } from 'react';
 import useLegacyScript from '../../legacy/useLegacyScript';
 import init from './legacy';
+import AccountMenu from '../../components/AccountMenu';
 import './styles.css';
 
 function UploadPdfPage() {
@@ -14,19 +15,7 @@ function UploadPdfPage() {
           <button className="top-btn" aria-label="Notifications">
             ♧
           </button>
-          <div className="profile">
-            <div className="avatar">
-              AK
-            </div>
-            <div className="profile-copy">
-              <b>
-                Admin Kumar
-              </b>
-              <small>
-                Administrator
-              </small>
-            </div>
-          </div>
+          <AccountMenu />
         </header>
         <section className="content">
           <div className="heading">

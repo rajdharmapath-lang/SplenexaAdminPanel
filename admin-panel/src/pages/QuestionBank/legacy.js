@@ -5,12 +5,13 @@ export default async function init(document, window) {
   const productStorageKey = 'fmge-question-bank-products';
   const subjectStorageKey = 'fmge-question-bank-subjects';
   const questionStorageKey = 'fmge-question-bank-questions';
-  let cachedCatalog = { products: [], subjects: [], questions: [] };
+  let cachedCatalog = { products: [], subjects: [], questions: [], tests: [] };
   try {
     cachedCatalog = {
       products: JSON.parse(window.sessionStorage.getItem(productStorageKey) || '[]'),
       subjects: JSON.parse(window.sessionStorage.getItem(subjectStorageKey) || '[]'),
       questions: JSON.parse(window.sessionStorage.getItem(questionStorageKey) || '[]'),
+      tests: JSON.parse(window.sessionStorage.getItem('fmge-question-bank-tests') || '[]'),
     };
   } catch (error) {
     console.error('Could not read the previous Question Bank browser cache.', error);
@@ -18,16 +19,20 @@ export default async function init(document, window) {
   let products = [];
   let subjects = [];
   let questions = [];
+  let tests = [];
   let catalogNeedsSave = false;
   try {
     const catalog = await loadAdminCatalog(window);
-    const remoteHasContent = catalog.products.length || catalog.subjects.length || catalog.questions.length;
-    const localHasContent = cachedCatalog.products.length || cachedCatalog.subjects.length || cachedCatalog.questions.length;
+    const remoteHasContent = catalog.products.length || catalog.subjects.length || catalog.questions.length || catalog.tests.length;
+    const localHasContent = cachedCatalog.products.length || cachedCatalog.subjects.length || cachedCatalog.questions.length || cachedCatalog.tests.length;
     const source = !remoteHasContent && localHasContent ? cachedCatalog : catalog;
     catalogNeedsSave = source === cachedCatalog;
     products = source.products;
     subjects = source.subjects;
     questions = source.questions;
+    tests = catalog.tests.length ? catalog.tests : cachedCatalog.tests;
+    if (!catalog.tests.length && cachedCatalog.tests.length) catalogNeedsSave = true;
+    window.sessionStorage.setItem('fmge-question-bank-tests', JSON.stringify(tests));
   } catch (error) {
     const productList = document.getElementById('product-list');
     productList.innerHTML = '<div class="product-empty"><strong>Question Bank could not be loaded</strong>' +
@@ -90,14 +95,17 @@ export default async function init(document, window) {
     window.sessionStorage.setItem(productStorageKey, JSON.stringify(products));
     window.sessionStorage.setItem(subjectStorageKey, JSON.stringify(subjects));
     window.sessionStorage.setItem(questionStorageKey, JSON.stringify(questions));
-    saveAdminCatalog({ products: products, subjects: subjects, questions: questions }, window).catch(function (error) {
+    tests = tests.filter(function (test) {
+      return products.some(function (product) { return String(product.id) === String(test.productId); });
+    });
+    window.sessionStorage.setItem('fmge-question-bank-tests', JSON.stringify(tests));
+    saveAdminCatalog({ products: products, subjects: subjects, questions: questions, tests: tests }, window).catch(function (error) {
       console.error('Could not save the Question Bank catalog to the backend.', error);
       window.alert('The Question Bank change was not saved to the shared database. ' + error.message);
     });
   }
-  if (catalogNeedsSave) persistCatalog();
-  function syncTestQuestionCounts() {
-    const tests = JSON.parse(window.sessionStorage.getItem('fmge-question-bank-tests') || '[]');
+  function syncTestQuestionCounts(skipSave) {
+    let hasChanges = false;
     tests.forEach(function (test) {
       const subject = subjects.find(function (item) { return item.id === test.subjectId; });
       if (!subject) return;
@@ -108,16 +116,24 @@ export default async function init(document, window) {
       });
       let selectedQuestions = matchingQuestions;
       if (test.questionSelectionEnabled) {
+        const previousQuestionIds = JSON.stringify(test.questionIds || []);
         const selectedIds = new Set((Array.isArray(test.questionIds) ? test.questionIds : []).map(String));
         selectedQuestions = matchingQuestions.filter(function (question) { return selectedIds.has(String(question.id)); });
         test.questionIds = selectedQuestions.map(function (question) { return String(question.id); });
+        if (previousQuestionIds !== JSON.stringify(test.questionIds)) hasChanges = true;
       }
-      test.totalQuestions = selectedQuestions.length;
-      test.totalMarks = test.totalQuestions * (Number(test.marksPerQuestion) || 0);
+      const totalQuestions = selectedQuestions.length;
+      const totalMarks = totalQuestions * (test.marksEnabled ? Number(test.marksPerQuestion) || 0 : 0);
+      if (test.totalQuestions !== totalQuestions || test.totalMarks !== totalMarks) hasChanges = true;
+      test.totalQuestions = totalQuestions;
+      test.totalMarks = totalMarks;
     });
     window.sessionStorage.setItem('fmge-question-bank-tests', JSON.stringify(tests));
+    if (hasChanges && !skipSave) persistCatalog();
+    return hasChanges;
   }
-  syncTestQuestionCounts();
+  const testCountsChanged = syncTestQuestionCounts(true);
+  if (catalogNeedsSave || testCountsChanged) persistCatalog();
   let currentProductId = null;
   let editingProductId = null;
   let editingProductIconDataUrl = '';
@@ -636,7 +652,6 @@ export default async function init(document, window) {
         questions.forEach(function (question) {
           if (question.productId === currentProductId && question.subject === currentSubject.name && question.topic === current.oldName) question.topic = name;
         });
-        const tests = JSON.parse(window.sessionStorage.getItem('fmge-question-bank-tests') || '[]');
         tests.forEach(function (test) {
           if (test.productId === currentProductId && test.subjectId === currentSubject.id && test.topic === current.oldName) test.topic = name;
         });
@@ -680,6 +695,7 @@ export default async function init(document, window) {
       if (subject && window.confirm('Delete "' + subject.name + '" and its topics and questions?')) {
         subjects.splice(index, 1);
         questions = questions.filter(function (question) { return question.productId !== currentProductId || question.subject !== subject.name; });
+        tests = tests.filter(function (test) { return test.subjectId !== subject.id; });
         persistCatalog();
         syncTestQuestionCounts();
         renderSubjects();
@@ -700,6 +716,9 @@ export default async function init(document, window) {
         subject.topics.splice(topicIndex, 1);
         delete subject.topicIcons[topic];
         questions = questions.filter(function (question) { return question.productId !== currentProductId || question.subject !== subject.name || question.topic !== topic; });
+        tests = tests.filter(function (test) {
+          return test.productId !== currentProductId || test.subjectId !== subject.id || test.topic !== topic;
+        });
         persistCatalog();
         syncTestQuestionCounts();
         renderTopics(Number(subjectView.dataset.subjectIndex));
@@ -731,6 +750,9 @@ export default async function init(document, window) {
       document.getElementById('view-question-subject').textContent = question.subject;
       document.getElementById('view-question-topic').textContent = question.topic;
       document.getElementById('view-question-difficulty').textContent = question.difficulty || 'Medium';
+      document.getElementById('view-question-tags').textContent = Array.isArray(question.tags) && question.tags.length
+        ? question.tags.join(', ')
+        : 'Not set';
       document.getElementById('view-question-options').innerHTML = (question.options || []).map(function (option) { return '<li>' + option + '</li>'; }).join('');
       document.getElementById('view-question-answer').textContent = question.options && question.options[question.answer] ? question.options[question.answer] : 'Not set';
       document.getElementById('view-question-dialog').classList.add('on');

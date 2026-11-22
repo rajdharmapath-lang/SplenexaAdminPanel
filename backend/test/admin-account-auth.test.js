@@ -81,6 +81,9 @@ test('login rejects an incorrect password and signs a valid admin session', asyn
   const passwordHash = await require('../src/services/admin-password').hashPassword('a-unique-password-123');
   mock.method(adminAccountRepository, 'getAdminAccountByEmail', async () => ({
     admin_id: 'f48f0e2d-f6c3-4f37-93ab-f60b43d522d9',
+    first_name: 'Ada',
+    last_name: 'Lovelace',
+    professional: 'Doctor',
     email: 'ada@example.com',
     password_hash: passwordHash,
   }));
@@ -102,6 +105,44 @@ test('login rejects an incorrect password and signs a valid admin session', asyn
     assert.equal(payload.adminId, 'f48f0e2d-f6c3-4f37-93ab-f60b43d522d9');
     assert.equal(payload.jti, createSessionStub.mock.calls[0].arguments[0].jti);
     assert.equal(createSessionStub.mock.calls[0].arguments[0].adminId, payload.adminId);
+    assert.deepEqual(validResponse.body.user, {
+      id: payload.adminId,
+      firstName: 'Ada',
+      lastName: 'Lovelace',
+      professional: 'Doctor',
+      email: 'ada@example.com',
+    });
+  } finally {
+    mock.restoreAll();
+  }
+});
+
+test('session verification returns the signed-in user profile', async () => {
+  const account = {
+    admin_id: 'f48f0e2d-f6c3-4f37-93ab-f60b43d522d9',
+    first_name: 'Ada',
+    last_name: 'Lovelace',
+    professional: 'Doctor',
+    email: 'ada@example.com',
+  };
+  const accountStub = mock.method(adminAccountRepository, 'getAdminAccountById', async () => account);
+  try {
+    const response = createResponse();
+    await controller.getAdminSession({
+      adminSession: { admin_id: account.admin_id },
+    }, response, (error) => { throw error; });
+
+    assert.deepEqual(accountStub.mock.calls[0].arguments, [account.admin_id]);
+    assert.deepEqual(response.body, {
+      authenticated: true,
+      user: {
+        id: account.admin_id,
+        firstName: 'Ada',
+        lastName: 'Lovelace',
+        professional: 'Doctor',
+        email: 'ada@example.com',
+      },
+    });
   } finally {
     mock.restoreAll();
   }

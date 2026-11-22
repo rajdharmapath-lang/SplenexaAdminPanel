@@ -1,5 +1,7 @@
 import { memo, useState } from 'react';
 import { TrendChart, RevenueChart, DonutSummary } from './charts';
+import AccountMenu from '../../components/AccountMenu';
+import { useAdminSession } from '../../context/AdminSessionContext';
 import {
   KPIS, PAYMENT_STATUS, PRODUCT_OVERVIEW, TOP_PRODUCTS, RECENT_LOGINS, RECENT_PAYMENTS, STATUS_CLASS,
 } from './data';
@@ -63,6 +65,7 @@ function DataTable({ title, viewAllHref, columns, rows }) {
 }
 
 function DashboardPage() {
+  const { user } = useAdminSession();
   const [startDate, setStartDate] = useState('2024-04-01');
   const [endDate, setEndDate] = useState('2024-04-30');
   return (
@@ -75,18 +78,14 @@ function DashboardPage() {
           </label>
           <div className="r">
             <div className="bell"><Icon name="bell-fill" /><em>3</em></div>
-            <div className="me">
-              <div className="av">A</div>
-              <div><b>Admin</b>Super Admin</div>
-              <Icon name="chevron-down" />
-            </div>
+            <AccountMenu />
           </div>
         </div>
 
         <div className="wrap">
           <div className="hd">
             <div>
-              <h1>Good Morning, Admin 👋</h1>
+              <h1>Good Morning, {user?.firstName || 'there'} 👋</h1>
               <p>Here&rsquo;s what&rsquo;s happening with your FMGE application platform today.</p>
             </div>
             <div className="date" aria-label="Dashboard date range">

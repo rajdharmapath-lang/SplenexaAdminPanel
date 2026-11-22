@@ -25,7 +25,7 @@ function toUser(row) {
 async function getUserById(userId) {
   const result = await supabase
     .getClient()
-    .from('users')
+    .from('AppUsers')
     .select('id, dial_code, phone, name, state, batch_year, profile_completed')
     .eq('id', userId)
     .maybeSingle();
@@ -35,7 +35,7 @@ async function getUserById(userId) {
 async function getUserByPhone(dialCode, phone) {
   const result = await supabase
     .getClient()
-    .from('users')
+    .from('AppUsers')
     .select('id, dial_code, phone, name, state, batch_year, profile_completed')
     .eq('dial_code', dialCode)
     .eq('phone', phone)
@@ -53,7 +53,7 @@ async function getOrCreateUserByPhone(dialCode, phone) {
 
   const result = await supabase
     .getClient()
-    .from('users')
+    .from('AppUsers')
     .insert({ dial_code: normalizedDialCode, phone: normalizedPhone })
     .select('id, dial_code, phone, name, state, batch_year, profile_completed')
     .single();
@@ -75,7 +75,7 @@ async function getOrCreateUserByPhone(dialCode, phone) {
 async function updateProfile(userId, profile) {
   const result = await supabase
     .getClient()
-    .from('users')
+    .from('AppUsers')
     .update({
       name: profile.name.trim(),
       state: profile.state,

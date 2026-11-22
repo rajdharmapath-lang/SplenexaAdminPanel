@@ -1,6 +1,7 @@
 import { memo } from 'react';
 import useLegacyScript from '../../legacy/useLegacyScript';
 import init from './legacy';
+import AccountMenu from '../../components/AccountMenu';
 import './styles.css';
 
 function CreateNotificationPage() {
@@ -21,20 +22,7 @@ function CreateNotificationPage() {
                   3
                 </span>
               </div>
-              <div className="d-flex align-items-center gap-2">
-                <div className="avatar">
-                  A
-                </div>
-                <div className="who">
-                  <b>
-                    Admin
-                  </b>
-                  <small>
-                    Super Admin
-                  </small>
-                </div>
-                <i className="bi bi-chevron-down ms-2"></i>
-              </div>
+              <AccountMenu />
             </div>
           </header>
           <div className="content">

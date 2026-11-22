@@ -1,6 +1,7 @@
 import { memo } from 'react';
 import useLegacyScript from '../../legacy/useLegacyScript';
 import init from './legacy';
+import AccountMenu from '../../components/AccountMenu';
 import './styles.css';
 
 function AddQuestionPage() {
@@ -20,18 +21,7 @@ function AddQuestionPage() {
                 3
               </em>
             </div>
-            <div className="me">
-              <div className="av">
-                A
-              </div>
-              <div>
-                <b>
-                  Admin
-                </b>
-                Super Admin
-              </div>
-              <i className="bi bi-chevron-down"></i>
-            </div>
+            <AccountMenu />
           </div>
         </div>
         <div className="wrap">
@@ -284,7 +274,7 @@ function AddQuestionPage() {
                 </span>
               </div>
               <div className="ti">
-                <input placeholder="Add tags (e.g. hypertension, cardiovascular)" />
+                <input id="question-tags" placeholder="Add tags (e.g. hypertension, cardiovascular)" />
                 <i className="bi bi-plus-lg"></i>
               </div>
               <div className="tips">
