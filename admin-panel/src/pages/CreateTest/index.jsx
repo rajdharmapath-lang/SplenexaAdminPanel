@@ -100,10 +100,9 @@ function CreateTestPage() {
               <div id="test-icon-field">
                 <label className="f" htmlFor="test-icon-code">Test Bootstrap Icon</label>
                 <div className="bootstrap-icon-input">
-                  <i id="test-icon-preview" className="bi bi-clipboard2-check-fill" aria-hidden="true"></i>
-                  <input className="in" id="test-icon-code" defaultValue="bi bi-clipboard2-check-fill" placeholder="bi bi-clipboard2-check-fill" autoComplete="off" />
+                  <span className="bootstrap-icon-preview" id="test-icon-preview"><i className="bi bi-clipboard2-check-fill" aria-hidden="true"></i></span>
+                  <input className="in" id="test-icon-code" placeholder="Paste icon class or HTTPS image URL" autoComplete="off" />
                 </div>
-                <small className="bootstrap-icon-help">Example: <code>bi bi-clipboard2-check-fill</code></small>
               </div>
             </div>
             <div className="parent-subject-toggle" id="parent-subject-toggle-field">
@@ -127,10 +126,9 @@ function CreateTestPage() {
               <div id="topic-icon-field">
                 <label className="f" htmlFor="topic-icon-code">Topic Bootstrap Icon</label>
                 <div className="bootstrap-icon-input">
-                  <i id="topic-icon-preview" className="bi bi-bookmark-fill" aria-hidden="true"></i>
-                  <input className="in" id="topic-icon-code" defaultValue="bi bi-bookmark-fill" placeholder="bi bi-bookmark-fill" autoComplete="off" />
+                  <span className="bootstrap-icon-preview" id="topic-icon-preview"><i className="bi bi-bookmark-fill" aria-hidden="true"></i></span>
+                  <input className="in" id="topic-icon-code" placeholder="Paste icon class or HTTPS image URL" autoComplete="off" />
                 </div>
-                <small className="bootstrap-icon-help">Example: <code>bi bi-bookmark-fill</code></small>
               </div>
             </div>
             <div className="g2">
@@ -195,9 +193,16 @@ function CreateTestPage() {
             </div>
             <div className="row4">
               <div>
-                <label className="f" htmlFor="total-question-count">
-                  Questions in Selection
-                </label>
+                <div className="question-count-heading">
+                  <label className="f" htmlFor="total-question-count">Questions in Selection</label>
+                  <label className="selection-mode-toggle" htmlFor="question-selection-enabled">
+                    Custom selection
+                    <span className="sw">
+                      <input id="question-selection-enabled" type="checkbox" aria-label="Use only selected questions" />
+                      <span></span>
+                    </span>
+                  </label>
+                </div>
                 <input className="in" id="total-question-count" type="number" defaultValue="0" readOnly style={{ fontWeight: "600" }} />
               </div>
               <div>
@@ -261,7 +266,7 @@ function CreateTestPage() {
               </div>
             </div>
           </div>
-          <div className="card question-selection-card" id="question-selection-card">
+          <div className="card question-selection-card" id="question-selection-card" hidden>
             <div className="question-selection-heading">
               <div>
                 <h3><i className="bi bi-ui-checks-grid"></i> Question Selection</h3>

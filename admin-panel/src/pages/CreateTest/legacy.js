@@ -1,5 +1,6 @@
 // Behaviour carried over from the original HTML page.
 import { loadAdminCatalog, saveAdminCatalog } from '../../services/questionBankApi';
+import { normalizeBootstrapIcon, normalizeIconValue, normalizeImageUrl } from '../../utils/iconValue';
 
 export default async function init(document, window) {
   const $ = id => document.getElementById(id);
@@ -16,6 +17,8 @@ export default async function init(document, window) {
   const parentSubjectToggleField = $('parent-subject-toggle-field');
   const parentSubjectToggle = $('use-parent-subject');
   const topicInput = $('test-topic');
+  const selectionToggle = $('question-selection-enabled');
+  const selectionCard = $('question-selection-card');
   const durationToggle = $('duration-enabled');
   const durationControls = $('duration-controls');
   let products = [];
@@ -103,16 +106,14 @@ export default async function init(document, window) {
     })[character]);
   }
 
-  function normalizeBootstrapIcon(value) {
-    const iconClass = String(value || '').trim().replace(/\s+/g, ' ');
-    if (/^bi-[a-z0-9-]+$/i.test(iconClass)) return 'bi ' + iconClass;
-    return /^bi bi-[a-z0-9-]+$/i.test(iconClass) ? iconClass : '';
-  }
-
   function updateIconPreview(inputId, previewId, fallbackClass) {
     const input = $(inputId);
-    const iconClass = normalizeBootstrapIcon(input.value);
-    $(previewId).className = iconClass || fallbackClass;
+    const preview = $(previewId);
+    const iconUrl = normalizeImageUrl(input.value);
+    const iconClass = normalizeBootstrapIcon(input.value) || fallbackClass;
+    preview.innerHTML = iconUrl
+      ? `<img src="${escapeHtml(iconUrl)}" alt="" />`
+      : `<i class="${iconClass}" aria-hidden="true"></i>`;
     input.setCustomValidity('');
   }
 
@@ -144,7 +145,7 @@ export default async function init(document, window) {
 
   let selectedQuestionIds = [];
   let previousScopeKey = '';
-  let questionSelectionWasChanged = false;
+  let selectionPreferenceChosen = false;
 
   function renderQuestionSelection(scopeQuestions) {
     const availableList = $('available-question-list');
@@ -176,14 +177,15 @@ export default async function init(document, window) {
     const scopeKey = [scope.productId, scope.subjectName, scope.topicName].join('|');
     const scopeQuestions = matchingQuestions(scope);
     if (resetSelection || scopeKey !== previousScopeKey) {
-      if (scopeKey !== previousScopeKey) questionSelectionWasChanged = false;
       selectedQuestionIds = scopeQuestions.map(question => String(question.id));
+      if (!selectionPreferenceChosen) selectionToggle.checked = scopeQuestions.length > 0;
     } else {
       const availableIds = new Set(scopeQuestions.map(question => String(question.id)));
       selectedQuestionIds = selectedQuestionIds.filter(id => availableIds.has(String(id)));
     }
     previousScopeKey = scopeKey;
     renderQuestionSelection(scopeQuestions);
+    selectionCard.hidden = !selectionToggle.checked;
     updateTotalMarks();
   }
 
@@ -238,7 +240,6 @@ export default async function init(document, window) {
   $('question-selection-card').addEventListener('click', event => {
     if (event.target.closest('#select-all-questions')) {
       selectedQuestionIds = matchingQuestions(questionScope()).map(question => String(question.id));
-      questionSelectionWasChanged = true;
       refreshQuestionSelection(false);
       return;
     }
@@ -249,8 +250,12 @@ export default async function init(document, window) {
     const questionId = selectionButton.dataset.questionId;
     if (addButton && !selectedQuestionIds.includes(questionId)) selectedQuestionIds.push(questionId);
     if (removeButton) selectedQuestionIds = selectedQuestionIds.filter(id => id !== questionId);
-    questionSelectionWasChanged = true;
     refreshQuestionSelection(false);
+  });
+  selectionToggle.addEventListener('change', () => {
+    selectionPreferenceChosen = true;
+    selectionCard.hidden = !selectionToggle.checked;
+    updateTotalMarks();
   });
   function updateScoringControls() {
     $('marks-per-question').disabled = !$('marks-enabled').checked;
@@ -297,7 +302,10 @@ export default async function init(document, window) {
   };
 
   function updateTotalMarks() {
-    const count = selectedQuestionIds.length;
+    const count = selectionToggle.checked
+      ? selectedQuestionIds.length
+      : matchingQuestions(questionScope()).length;
+    $('total-question-count').disabled = !selectionToggle.checked;
     const marks = $('marks-enabled').checked ? Math.max(0, Number($('marks-per-question').value) || 0) : 0;
     $('total-question-count').value = String(count);
     $('total-marks').value = String(count * marks);
@@ -363,16 +371,16 @@ export default async function init(document, window) {
       return;
     }
     const testIconCode = $('test-icon-code').value.trim();
-    const testIconClass = normalizeBootstrapIcon(testIconCode);
-    if (!isTopicMode && testIconCode && !testIconClass) {
-      $('test-icon-code').setCustomValidity('Use a Bootstrap Icons class such as "bi bi-clipboard2-check-fill".');
+    const testIconValue = normalizeIconValue(testIconCode);
+    if (!isTopicMode && testIconCode && !testIconValue) {
+      $('test-icon-code').setCustomValidity('Use a Bootstrap Icons class or a valid HTTPS image URL.');
       $('test-icon-code').reportValidity();
       return;
     }
     const topicIconCode = $('topic-icon-code').value.trim();
-    const topicIconClass = normalizeBootstrapIcon(topicIconCode);
-    if (topicName && topicIconCode && !topicIconClass) {
-      $('topic-icon-code').setCustomValidity('Use a Bootstrap Icons class such as "bi bi-bookmark-fill".');
+    const topicIconValue = normalizeIconValue(topicIconCode);
+    if (topicName && topicIconCode && !topicIconValue) {
+      $('topic-icon-code').setCustomValidity('Use a Bootstrap Icons class or a valid HTTPS image URL.');
       $('topic-icon-code').reportValidity();
       return;
     }
@@ -408,7 +416,7 @@ export default async function init(document, window) {
       subject.topics.push(topicName);
       subject.topics.sort((left, right) => left.localeCompare(right));
     }
-    if (topicName && topicIconClass) subject.topicIcons[topicName] = topicIconClass;
+    if (topicName && topicIconValue) subject.topicIcons[topicName] = topicIconValue;
     saveSubjects();
 
     if (isTopicMode) {
@@ -425,20 +433,22 @@ export default async function init(document, window) {
       return;
     }
 
-    const totalQuestions = selectedQuestionIds.length;
+    const totalQuestions = selectionToggle.checked
+      ? selectedQuestionIds.length
+      : matchingQuestions(questionScope()).length;
     const marksPerQuestion = $('marks-enabled').checked ? Math.max(0, Number($('marks-per-question').value) || 0) : 0;
     const negativeMarking = $('negative-marking-enabled').checked ? Math.max(0, Number($('negative-marking').value) || 0) : 0;
     const test = {
       id: makeId(),
       productId: currentProductId,
       title: name,
-      iconBootstrapClass: testIconClass,
+      iconBootstrapClass: testIconValue,
       addTopicUnderTest: useTopic,
       subjectId: subject.id,
       topic: topicName || null,
-      topicIconBootstrapClass: topicName ? topicIconClass : '',
-      questionIds: [...selectedQuestionIds],
-      questionSelectionEnabled: matchingQuestions(questionScope()).length > 0 || questionSelectionWasChanged,
+      topicIconBootstrapClass: topicName ? topicIconValue : '',
+      questionIds: selectionToggle.checked ? [...selectedQuestionIds] : [],
+      questionSelectionEnabled: selectionToggle.checked,
       totalQuestions: totalQuestions,
       totalMarks: totalQuestions * marksPerQuestion,
       marksPerQuestion: marksPerQuestion,

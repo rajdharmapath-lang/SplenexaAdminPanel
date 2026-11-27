@@ -56,6 +56,7 @@
   width: 58px; height: 58px; flex: 0 0 58px; display: grid; place-items: center;
   border-radius: 17px; background: linear-gradient(145deg, #e6f4ff, #dffaf2); color: var(--mcq-navy); font-size: 25px;
 }
+.mcq-feature-icon img { width: 100%; height: 100%; object-fit: contain; border-radius: inherit; }
 .mcq-feature-copy { min-width: 0; display: flex; flex-direction: column; gap: 6px; }
 .mcq-feature-copy strong { color: var(--mcq-navy); font-size: 19px; line-height: 1.3; }
 .mcq-feature-copy > span {

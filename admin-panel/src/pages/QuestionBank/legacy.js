@@ -1,5 +1,6 @@
 // Runs once after the JSX markup mounts.
 import { loadAdminCatalog, saveAdminCatalog } from '../../services/questionBankApi';
+import { normalizeBootstrapIcon, normalizeIconValue, normalizeImageUrl } from '../../utils/iconValue';
 
 export default async function init(document, window) {
   const productStorageKey = 'fmge-question-bank-products';
@@ -174,7 +175,7 @@ export default async function init(document, window) {
         '<div class="product-card-head"><div class="product-card-info"><span class="product-card-icon">' + productIcon + '</span><div><h3>' + escapeHtml(product.name) + '</h3><p>' + escapeHtml(product.description || 'No description provided.') + '</p></div></div>' +
         '<div class="product-card-actions">' +
         '<button type="button" class="product-actions-toggle" aria-label="More actions for ' + escapeHtml(product.name) + '" aria-haspopup="menu" aria-expanded="false"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="5" r="2"></circle><circle cx="12" cy="12" r="2"></circle><circle cx="12" cy="19" r="2"></circle></svg></button>' +
-        '<div class="product-action-menu" role="menu" hidden><button type="button" class="delete-product" data-product-id="' + escapeHtml(product.id) + '" role="menuitem"><i class="bi bi-trash3-fill"></i>Delete</button></div>' +
+        '<div class="product-action-menu" role="menu" hidden><button type="button" class="edit-product-action" data-product-id="' + escapeHtml(product.id) + '" role="menuitem"><i class="bi bi-pencil-fill"></i>Edit</button><button type="button" class="delete-product" data-product-id="' + escapeHtml(product.id) + '" role="menuitem"><i class="bi bi-trash3-fill"></i>Delete</button></div>' +
         '</div></div><hr class="product-card-divider" /><div class="product-card-footer">' +
         '<span class="product-badge ' + (product.accessType === 'Free' ? 'free' : '') + '">' + escapeHtml(product.accessType || 'Paid') + '</span>' +
         '<span class="product-badge question-count">Questions: ' + questionCount.toLocaleString('en-US') + '</span>' +
@@ -260,10 +261,13 @@ export default async function init(document, window) {
     });
   }
 
-  function normalizeBootstrapIcon(value) {
-    const iconClass = String(value || '').trim().replace(/\s+/g, ' ');
-    if (/^bi-[a-z0-9-]+$/i.test(iconClass)) return 'bi ' + iconClass;
-    return /^bi bi-[a-z0-9-]+$/i.test(iconClass) ? iconClass : '';
+  function renderTopicIconPreview(value) {
+    const preview = document.getElementById('topic-icon-code-preview');
+    const iconUrl = normalizeImageUrl(value);
+    const iconClass = normalizeBootstrapIcon(value) || 'bi bi-bookmark-fill';
+    preview.innerHTML = iconUrl
+      ? '<img src="' + escapeHtml(iconUrl) + '" alt="" />'
+      : '<i class="' + escapeHtml(iconClass) + '" aria-hidden="true"></i>';
   }
 
   function openNameDialog(type, index) {
@@ -277,12 +281,12 @@ export default async function init(document, window) {
     document.getElementById('topic-icon-code-field').hidden = isSubject;
     if (!isSubject) {
       const subject = subjects[Number(subjectView.dataset.subjectIndex)];
-      const iconClass = subject.topicIcons[item] || '';
-      document.getElementById('topic-icon-code').value = iconClass;
-      document.getElementById('topic-icon-code-preview').className = normalizeBootstrapIcon(iconClass) || 'bi bi-bookmark-fill';
+      const iconValue = subject.topicIcons[item] || '';
+      document.getElementById('topic-icon-code').value = iconValue;
+      renderTopicIconPreview(iconValue);
     } else {
       document.getElementById('topic-icon-code').value = '';
-      document.getElementById('topic-icon-code-preview').className = 'bi bi-bookmark-fill';
+      renderTopicIconPreview('');
     }
     document.getElementById('save-create-subject').textContent = 'Save Changes';
     subjectDialog.classList.add('on');
@@ -296,6 +300,7 @@ export default async function init(document, window) {
     document.getElementById('subject-dialog-label').textContent = 'Subject Name';
     document.getElementById('topic-icon-code-field').hidden = true;
     document.getElementById('topic-icon-code').value = '';
+    renderTopicIconPreview('');
     document.getElementById('save-create-subject').textContent = 'Save';
   }
 
@@ -332,9 +337,14 @@ export default async function init(document, window) {
       const questionCount = questions.filter(function (question) {
         return question.productId === currentProductId && question.subject === subject.name && question.topic === topic;
       }).length;
-      const iconClass = normalizeBootstrapIcon(subject.topicIcons[topic]) || 'bi bi-bookmark-fill';
+      const iconValue = subject.topicIcons[topic] || '';
+      const iconUrl = normalizeImageUrl(iconValue);
+      const iconClass = normalizeBootstrapIcon(iconValue) || 'bi bi-bookmark-fill';
+      const iconMarkup = iconUrl
+        ? '<img src="' + escapeHtml(iconUrl) + '" alt="" />'
+        : '<i class="' + escapeHtml(iconClass) + '"></i>';
       return '<article class="topic-card category-card" data-topic="' + encodeURIComponent(topic) + '" data-topic-index="' + topicIndex + '" tabindex="0" role="group" aria-label="' + escapeHtml(topic) + ' topic">' +
-        '<div class="category-card-head"><span class="topic-card-icon"><i class="' + escapeHtml(iconClass) + '"></i></span><div class="category-card-info"><h3>' + escapeHtml(topic) + '</h3><p>' + escapeHtml(subject.name) + '</p></div>' +
+        '<div class="category-card-head"><span class="topic-card-icon">' + iconMarkup + '</span><div class="category-card-info"><h3>' + escapeHtml(topic) + '</h3><p>' + escapeHtml(subject.name) + '</p></div>' +
         categoryActions('topic', topicIndex) + '</div><hr class="category-card-divider" /><div class="category-card-footer"><span class="product-badge question-count">Questions: ' + questionCount.toLocaleString('en-US') + '</span></div></article>';
     }).join('') || '<p class="empty-topics">No topics added yet.</p>';
   }
@@ -367,6 +377,7 @@ export default async function init(document, window) {
     document.getElementById('create-subject-from-product').hidden = true;
     topicCreateQuestion.style.display = 'inline-flex';
     backQuestionList.style.display = 'inline-flex';
+    backQuestionList.querySelector('span').textContent = topicName ? 'Back to Topics' : 'Back to Subjects';
     subjectView.classList.add('on');
     renderQuestions(subject.name, topicName);
   }
@@ -380,7 +391,8 @@ export default async function init(document, window) {
     document.getElementById('create-subject-from-product').innerHTML = '<i class="bi bi-plus-circle"></i> Add Topic';
     document.getElementById('create-subject-from-product').hidden = false;
     topicCreateQuestion.style.display = 'none';
-    backQuestionList.style.display = 'none';
+    backQuestionList.style.display = 'inline-flex';
+    backQuestionList.querySelector('span').textContent = 'Back to Subjects';
     subjectView.classList.add('on');
     renderTopics(subjectIndex);
   }
@@ -397,7 +409,8 @@ export default async function init(document, window) {
     document.getElementById('create-subject-from-product').innerHTML = '<i class="bi bi-plus-circle"></i> Create Subject';
     document.getElementById('create-subject-from-product').hidden = false;
     topicCreateQuestion.style.display = 'none';
-    backQuestionList.style.display = 'none';
+    backQuestionList.style.display = 'inline-flex';
+    backQuestionList.querySelector('span').textContent = 'Back to Products';
     subjectView.classList.add('on');
     renderSubjects();
   }
@@ -430,8 +443,10 @@ export default async function init(document, window) {
   }
 
   backQuestionList.addEventListener('click', function () {
-    if (subjectView.dataset.topic) openTopics(Number(subjectView.dataset.subjectIndex));
-    else openSubjects();
+    const subjectIndex = subjectView.dataset.subjectIndex;
+    if (subjectView.dataset.topic) openTopics(Number(subjectIndex));
+    else if (subjectIndex !== undefined) openSubjects();
+    else showProducts();
   });
 
   document.getElementById('create-product').addEventListener('click', function () { openProductDialog(null); });
@@ -541,6 +556,13 @@ export default async function init(document, window) {
       }
       return;
     }
+    const edit = event.target.closest('.edit-product-action');
+    if (edit) {
+      edit.closest('.product-action-menu').hidden = true;
+      const product = products.find(function (item) { return item.id === edit.dataset.productId; });
+      if (product) openProductDialog(product);
+      return;
+    }
     const remove = event.target.closest('.delete-product');
     if (remove) {
       remove.closest('.product-action-menu').hidden = true;
@@ -602,19 +624,19 @@ export default async function init(document, window) {
   });
   document.getElementById('topic-icon-code').addEventListener('input', function (event) {
     event.target.setCustomValidity('');
-    document.getElementById('topic-icon-code-preview').className = normalizeBootstrapIcon(event.target.value) || 'bi bi-bookmark-fill';
+    renderTopicIconPreview(event.target.value);
   });
   document.getElementById('save-create-subject').addEventListener('click', function () {
     const input = document.getElementById('new-subject-name');
     const topicIconInput = document.getElementById('topic-icon-code');
-    const topicIconClass = normalizeBootstrapIcon(topicIconInput.value);
+    const topicIconValue = normalizeIconValue(topicIconInput.value);
     const name = input.value.trim();
     if (!name) {
       input.focus();
       return;
     }
-    if (editingItem?.type === 'topic' && topicIconInput.value.trim() && !topicIconClass) {
-      topicIconInput.setCustomValidity('Use a Bootstrap Icons class such as "bi bi-bookmark-fill".');
+    if (editingItem?.type === 'topic' && topicIconInput.value.trim() && !topicIconValue) {
+      topicIconInput.setCustomValidity('Use a Bootstrap Icons class or a valid HTTPS image URL.');
       topicIconInput.reportValidity();
       return;
     }
@@ -646,7 +668,7 @@ export default async function init(document, window) {
           return;
         }
         if (current.oldName !== name) delete currentSubject.topicIcons[current.oldName];
-        if (topicIconClass) currentSubject.topicIcons[name] = topicIconClass;
+        if (topicIconValue) currentSubject.topicIcons[name] = topicIconValue;
         else delete currentSubject.topicIcons[name];
         currentSubject.topics[current.index] = name;
         questions.forEach(function (question) {

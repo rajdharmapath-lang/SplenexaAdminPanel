@@ -31,10 +31,16 @@ function QuestionBankPage() {
                 <h1>Question Bank Products</h1>
                 <p>Create and manage products for your question bank.</p>
               </div>
-              <button className="add-subject" id="create-product" type="button">
-                <i className="bi bi-plus-circle"></i>
-                Create Product
-              </button>
+              <div className="product-browser-actions">
+                <a className="back-list" href="#fmge-dashboard">
+                  <i className="bi bi-arrow-left"></i>
+                  Back
+                </a>
+                <button className="add-subject" id="create-product" type="button">
+                  <i className="bi bi-plus-circle"></i>
+                  Create Product
+                </button>
+              </div>
             </div>
             <div className="product-list" id="product-list"></div>
           </div>
@@ -49,7 +55,7 @@ function QuestionBankPage() {
                 </button>
                 <button className="back-list" id="back-question-list" type="button" style={{ display: "none" }}>
                   <i className="bi bi-arrow-left"></i>
-                  Back
+                  <span>Back</span>
                 </button>
                 <button className="add-question topic-create-question" id="create-question-from-topic" type="button">
                   <i className="bi bi-plus-lg"></i>
@@ -137,12 +143,12 @@ function QuestionBankPage() {
           <label id="subject-dialog-label" htmlFor="new-subject-name">Subject Name</label>
           <input id="new-subject-name" placeholder="Enter subject name" />
           <div className="topic-icon-code-editor" id="topic-icon-code-field" hidden>
-            <label htmlFor="topic-icon-code">Bootstrap icon code</label>
+            <label htmlFor="topic-icon-code">Bootstrap icon or image URL (optional)</label>
             <div className="product-icon-code-field">
-              <i id="topic-icon-code-preview" className="bi bi-bookmark-fill" aria-hidden="true"></i>
-              <input id="topic-icon-code" placeholder="bi bi-bookmark-fill" autoComplete="off" />
+              <span id="topic-icon-code-preview"><i className="bi bi-bookmark-fill" aria-hidden="true"></i></span>
+              <input id="topic-icon-code" placeholder="Paste icon class or HTTPS image URL" autoComplete="off" />
             </div>
-            <small className="product-icon-code-help">Example: <code>bi bi-bookmark-fill</code></small>
+            <small className="product-icon-code-help">Optional. Use a Bootstrap icon class or an HTTPS image URL.</small>
           </div>
           <div className="edit-actions">
             <button id="cancel-create-subject" type="button">Cancel</button>

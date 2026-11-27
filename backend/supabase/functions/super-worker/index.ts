@@ -113,11 +113,13 @@ async function authenticate(request: Request) {
 
 function getSupabaseClient() {
   const url = Deno.env.get("SUPABASE_URL");
-  const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-  if (!url || !serviceRoleKey) {
-    throw new Error("Supabase Edge Function is not configured.");
+  const secretKey = Deno.env.get("SUPABASE_SECRET_KEY");
+  if (!url || !secretKey || secretKey.split(".").length === 3) {
+    throw new Error(
+      "Supabase Edge Function requires SUPABASE_URL and a non-JWT SUPABASE_SECRET_KEY.",
+    );
   }
-  return createClient(url, serviceRoleKey, {
+  return createClient(url, secretKey, {
     auth: {
       autoRefreshToken: false,
       persistSession: false,

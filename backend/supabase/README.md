@@ -2,10 +2,14 @@
 
 1. Create a Supabase project.
 2. Configure the backend-only values `SUPABASE_URL`,
-   `SUPABASE_SERVICE_ROLE_KEY`, `JWT_SECRET`, `MSG91_TOKEN_AUTH`, and
-   `MSG91_WIDGET_ID` in `backend/.env`. Use credentials from the Splenexa
-   Supabase project only. The service-role key is server-only and must never
-   be included in the app bundle.
+   `SUPABASE_SECRET_KEY`, `JWT_SECRET`, `MSG91_AUTHKEY`, and
+   `MSG91_WIDID` in `backend/.env`. Use the MSG91 AuthKey and Widget ID shown
+   in the widget's server-side integration settings. `MSG91_TOKENAUTH` is a
+   separate client-side widget token and must not be used as the backend
+   `authkey` header. Use credentials from the Splenexa Supabase project only.
+   For production, use a current non-JWT Supabase Secret API key. The legacy
+   JWT-based service-role key is not accepted by the backend in production.
+   Keep this key server-only; never include it in the app bundle.
 3. Configure `EXPO_PUBLIC_API_URL`, `EXPO_PUBLIC_SUPABASE_URL`, and
    `EXPO_PUBLIC_SUPABASE_ANON_KEY` in `frontend/.env`. These values are
    embedded in the app; never put a service-role key in this file. For an
@@ -18,7 +22,7 @@
 5. Apply `backend/supabase/migrations/20261121000000_create_question_bank_catalog.sql`
    to create the shared Question Bank catalog. The backend accesses it through
    the existing Supabase client using `SUPABASE_URL` and a server-only
-   `SUPABASE_SECRET_KEY` (or `SUPABASE_SERVICE_ROLE_KEY`). Configure a unique
+   `SUPABASE_SECRET_KEY`. Configure a unique
    `JWT_SECRET` in the backend environment. Apply
    `backend/supabase/migrations/20261122000000_create_admin_accounts.sql` and
    `backend/supabase/migrations/20261123000000_allow_multiple_accounts.sql`
@@ -31,9 +35,9 @@
    questions from `GET /api/question-bank`.
 6. Install the Supabase CLI, authenticate, and link the `backend/` directory to
    the Splenexa Supabase project. Create an untracked
-   `backend/supabase/.env.edge` file containing only the same Splenexa
-   `JWT_SECRET` used by the Express backend, then set it as an Edge Function
-   secret:
+   `backend/supabase/.env.edge` file containing the same Splenexa `JWT_SECRET` used by the Express backend
+   and the non-JWT `SUPABASE_SECRET_KEY`, then set them as Edge Function
+   secrets:
 
    ```powershell
    cd backend
@@ -43,16 +47,24 @@
    supabase functions deploy super-worker
    ```
 
-   The file should have one line: `JWT_SECRET=...`. Supabase provides
-   `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` to the Edge Function from the
-   linked project. Never copy values from the reference project or place a
-   service-role key in the frontend.
+   The file should contain `JWT_SECRET=...` and
+   `SUPABASE_SECRET_KEY=...`. Supabase provides `SUPABASE_URL` to the Edge
+   Function from the linked project. Never copy values from the reference
+   project or place a Supabase secret key in the frontend.
 
    `verify_jwt` is disabled for the Supabase gateway because Splenexa issues its
    own API session JWT rather than a Supabase Auth JWT. The function verifies
-   that session signature and expiry itself before using the service role.
+   that session signature and expiry itself before using the server-only
+   Supabase secret key.
 
-MSG91 sends and verifies phone OTPs. After verification, the API creates or
-loads the corresponding database user and returns a signed API session token.
-The Expo app stores that token in SecureStore; the `super-worker` Edge Function
-validates it before reading or updating only that user's profile.
+For production, deploy the backend and Edge Function on runtimes with
+automatically synchronized system clocks (NTP). The app session JWT uses the
+backend clock when issued and the Edge Function clock when validated; no
+application code can compensate safely for an unsynchronized production host.
+
+MSG91 sends and verifies phone OTPs. The backend accepts legacy environment
+names `MSG91_AUTH_KEY` and `MSG91_WIDGET_ID` as aliases. After verification,
+the API creates or loads the corresponding database user and returns a signed
+API session token. The Expo app stores that token in SecureStore; the
+`super-worker` Edge Function validates it before reading or updating only that
+user's profile.

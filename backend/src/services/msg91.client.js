@@ -2,8 +2,8 @@ const BASE_URL = 'https://api.msg91.com/api/v5/widget';
 const REQUEST_TIMEOUT_MS = 10000;
 
 function getConfig() {
-  const authKey = (process.env.MSG91_TOKEN_AUTH || process.env.MSG91_AUTH_KEY)?.trim();
-  const widgetId = process.env.MSG91_WIDGET_ID?.trim();
+  const authKey = (process.env.MSG91_AUTHKEY || process.env.MSG91_AUTH_KEY)?.trim();
+  const widgetId = (process.env.MSG91_WIDID || process.env.MSG91_WIDGET_ID)?.trim();
   if (!authKey || !widgetId) {
     const error = new Error('MSG91 OTP is not configured.');
     error.code = 'MSG91_NOT_CONFIGURED';

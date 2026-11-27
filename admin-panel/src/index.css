@@ -44,7 +44,7 @@ body { background: #d9fbf7; font-family: Poppins, "Segoe UI", Arial, sans-serif;
 .account-menu-details { display: grid; gap: 4px; padding: 10px 10px 12px; border-bottom: 1px solid #edf1f5; }
 .account-menu-details strong { overflow-wrap: anywhere; font-size: 13px; }
 .account-menu-details span { overflow-wrap: anywhere; color: #68798c; font-size: 12px; }
-.account-menu-dropdown button { display: flex; align-items: center; gap: 10px; width: 100%; margin-top: 6px; padding: 10px; border: 0; border-radius: 8px; color: #b42318; background: transparent; font: inherit; font-size: 13px; text-align: left; cursor: pointer; }
+.account-menu-dropdown button { display: flex; align-items: center; gap: 10px; width: 100%; box-sizing: border-box; margin-top: 6px; padding: 10px; border: 0; border-radius: 8px; color: #b42318; background: transparent; font: inherit; font-size: 13px; text-align: left; cursor: pointer; }
 .account-menu-dropdown button:hover:not(:disabled) { background: #fff1f0; }
 .account-menu-dropdown button:disabled { opacity: .6; cursor: wait; }
 @media (max-width: 560px) {

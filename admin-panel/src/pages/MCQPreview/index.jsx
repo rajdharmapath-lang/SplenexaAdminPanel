@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { normalizeBootstrapIcon, normalizeImageUrl } from '../../utils/iconValue';
 import './styles.css';
 
 const STORAGE_KEYS = {
@@ -74,12 +75,6 @@ function questionsForTest(data, test, subject) {
   return matching.filter(question => selectedIds.has(String(question.id)));
 }
 
-function bootstrapIconClass(value) {
-  const iconClass = String(value || '').trim().replace(/\s+/g, ' ');
-  if (/^bi-[a-z0-9-]+$/i.test(iconClass)) return `bi ${iconClass}`;
-  return /^bi bi-[a-z0-9-]+$/i.test(iconClass) ? iconClass : '';
-}
-
 function safeRichHtml(html) {
   if (!html || typeof document === 'undefined') return '';
   const template = document.createElement('template');
@@ -144,7 +139,9 @@ function Header({ title, onBack, eyebrow }) {
 function FeatureCard({ item, onClick, detail, disabled = false }) {
   return (
     <button className="mcq-feature-card" type="button" onClick={onClick} disabled={disabled}>
-      <span className="mcq-feature-icon"><i className={item.iconClass || `bi bi-${item.icon}`} /></span>
+      <span className="mcq-feature-icon">
+        {item.iconUrl ? <img src={item.iconUrl} alt="" /> : <i className={item.iconClass || `bi bi-${item.icon}`} />}
+      </span>
       <span className="mcq-feature-copy">
         <strong>{item.title}</strong>
         <span>{item.subtitle}</span>
@@ -495,7 +492,7 @@ export default function MCQPreviewPage() {
           <div className="mcq-feature-list">
             {products.map(product => {
               const productIconClass = product.showIcon
-                ? bootstrapIconClass(product.iconBootstrapClass) || 'bi bi-journal-medical'
+                ? normalizeBootstrapIcon(product.iconBootstrapClass) || 'bi bi-journal-medical'
                 : 'bi bi-journal-medical';
               const productSubjects = subjects.filter(subject => String(subject.productId) === String(product.id));
               const questionCount = questionsForProduct(data, product.id).length;
@@ -528,7 +525,8 @@ export default function MCQPreviewPage() {
                     title: test.title,
                     subtitle: [product?.name, subject?.name, test.topic].filter(Boolean).join(' · ') || 'Test',
                     icon: 'clipboard-check',
-                    iconClass: bootstrapIconClass(test.iconBootstrapClass) || undefined,
+                    iconClass: normalizeBootstrapIcon(test.iconBootstrapClass) || undefined,
+                    iconUrl: normalizeImageUrl(test.iconBootstrapClass) || undefined,
                   }}
                   detail={`${testQuestions.length} questions · ${test.durationEnabled ? `${test.durationMinutes || 60} min` : 'No time limit'} · ${test.isPublished ? 'Published' : 'Draft preview'}`}
                   onClick={() => startTest(test)}
@@ -582,7 +580,8 @@ export default function MCQPreviewPage() {
                     title: topic,
                     subtitle: `Practice ${selectedSubject.name} MCQs by topic.`,
                     icon: 'bookmark',
-                    iconClass: bootstrapIconClass(selectedSubject.topicIcons?.[topic]) || undefined,
+                    iconClass: normalizeBootstrapIcon(selectedSubject.topicIcons?.[topic]) || undefined,
+                    iconUrl: normalizeImageUrl(selectedSubject.topicIcons?.[topic]) || undefined,
                   }}
                   detail={`${count} questions`}
                   onClick={() => startPractice(selectedSubject, topic)}

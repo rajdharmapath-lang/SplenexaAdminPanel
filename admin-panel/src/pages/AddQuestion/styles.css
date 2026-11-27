@@ -160,7 +160,7 @@
 .pg-add-question .hd .l>i{width:44px;height:44px;background:#e8f0fc;color:#2563eb;border-radius:12px}
 .pg-add-question h1{color:#0f1f47;font-size:26px}
 .pg-add-question .hd p{margin-top:4px;color:#64748b;font-size:13px}
-.pg-add-question .back{border-color:#d9e3f1;border-radius:8px;padding:0 16px;height:40px;color:#0f1f47;font-weight:600;cursor:pointer}
+.pg-add-question .back{border-color:#d9e3f1;border-radius:8px;padding:0 16px;height:40px;color:#0f1f47;font-weight:600;cursor:pointer;margin-top:0}
 .pg-add-question .back:hover{background:#f7faff;border-color:#b9c9e2}
 .pg-add-question .cols{grid-template-columns:minmax(0,1fr) 380px;gap:20px}
 .pg-add-question .card,.pg-add-question .edit-question-card,.pg-add-question .edit-meta-card{min-width:0;padding:20px;border:1px solid #e8eef8;border-radius:16px;background:#fff;box-shadow:0 4px 20px rgba(30,70,140,.08)}

@@ -8,14 +8,23 @@ function getClient() {
   }
 
   const supabaseUrl = process.env.SUPABASE_URL?.trim();
-  const serviceRoleKey = (
-    process.env.SUPABASE_SECRET_KEY ||
-    process.env.SUPABASE_SERVICE_ROLE_KEY ||
+  const allowsLegacyKey = ['development', 'test'].includes(process.env.NODE_ENV);
+  const configuredSecretKey = process.env.SUPABASE_SECRET_KEY?.trim();
+  const supabaseKey = (
+    configuredSecretKey ||
+    (allowsLegacyKey ? process.env.SUPABASE_SERVICE_ROLE_KEY : '') ||
     ''
   ).trim();
-  if (!supabaseUrl || !serviceRoleKey) {
+  const isJwtKey = supabaseKey.split('.').length === 3;
+  if (
+    !supabaseUrl ||
+    !supabaseKey ||
+    (!allowsLegacyKey && (!configuredSecretKey || isJwtKey))
+  ) {
     const error = new Error(
-      'Supabase backend is not configured. Set SUPABASE_URL and a server-side Supabase secret key in backend/.env.',
+      !allowsLegacyKey
+        ? 'A non-JWT SUPABASE_SECRET_KEY is required outside development and test. Do not use the legacy SUPABASE_SERVICE_ROLE_KEY.'
+        : 'Supabase backend is not configured. Set SUPABASE_URL and a server-side Supabase secret key in backend/.env.',
     );
     error.code = 'SUPABASE_NOT_CONFIGURED';
     throw error;
@@ -31,7 +40,7 @@ function getClient() {
     throw new Error('SUPABASE_URL must be a valid HTTPS URL.');
   }
 
-  client = createClient(supabaseUrl, serviceRoleKey, {
+  client = createClient(supabaseUrl, supabaseKey, {
     auth: {
       autoRefreshToken: false,
       persistSession: false,
