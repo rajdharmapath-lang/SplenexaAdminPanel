@@ -6,6 +6,8 @@ const express = require('express');
 const authRoutes = require('./src/routes/auth.routes');
 const userRoutes = require('./src/routes/user.routes');
 const questionBankRoutes = require('./src/routes/question-bank.routes');
+const feePlanRoutes = require('./src/routes/fee-plan.routes');
+const paymentRoutes = require('./src/routes/payment.routes');
 
 const app = express();
 const port = Number(process.env.PORT || 3000);
@@ -13,8 +15,11 @@ const port = Number(process.env.PORT || 3000);
 app.disable('x-powered-by');
 app.use(cors());
 app.use('/api/question-bank', express.json({ limit: '4mb' }), questionBankRoutes);
+app.use('/api/fee-plans', express.json({ limit: '1mb' }), feePlanRoutes);
+app.use('/api/payments', express.json({ limit: '16kb' }), paymentRoutes);
 app.use(express.json({ limit: '16kb' }));
 
+app.get('/', (_req, res) => res.json({ ok: true, service: 'splenexa-backend' }));
 app.get('/health', (_req, res) => res.json({ ok: true }));
 app.use('/api/auth', authRoutes);
 app.use('/api/user', userRoutes);

@@ -1,14 +1,11 @@
 import { NAV_ITEMS } from '../routes';
+import splenexaLogo from '../assets/images/splenexa-logo.png';
 
 export default function Sidebar({ route, onNavigate }) {
   return (
     <aside className="constant-sidebar">
       <div className="brand">
-        <div className="brand-mark"><i className="bi bi-mortarboard-fill" /></div>
-        <div>
-          <div className="brand-title">FMGE</div>
-          <span className="brand-subtitle">Admin Panel</span>
-        </div>
+        <img className="brand-logo" src={splenexaLogo} alt="Splenexa" />
       </div>
       <nav className="constant-nav" aria-label="Primary navigation">
         {NAV_ITEMS.map(([id, label, icon]) => (

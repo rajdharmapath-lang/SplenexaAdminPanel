@@ -805,7 +805,6 @@ const DAY_MS = 86400000;
         document.getElementById("notification-button").setAttribute("aria-label", "Notifications, no unread alerts");
       }
     });
-    document.getElementById("profile-button").addEventListener("click", () => showToast("Admin profile menu is a UI preview."));
     document.addEventListener("keydown", event => {
       if (event.key === "Escape") closeModals();
     });

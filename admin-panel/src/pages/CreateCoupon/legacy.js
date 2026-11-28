@@ -4,7 +4,7 @@
 import { populateCoursePlanSelect } from '../../coursePlans';
 
 export default function init(document, window, parent, setTimeout, setInterval) {
-populateCoursePlanSelect(document.getElementById('coupon-products'),window.sessionStorage);
+populateCoursePlanSelect(document.getElementById('coupon-products'), window);
 const $=i=>document.getElementById(i);
 document.querySelectorAll('#types .ty').forEach(t=>t.onclick=()=>{document.querySelectorAll('#types .ty').forEach(x=>x.classList.remove('on'));t.classList.add('on')});
 const code=$('code'),name=$('nm'),discount=$('dv'),generate=$('gen');

@@ -7,11 +7,19 @@ const SESSION_EXPIRED_EVENT = 'splenexa-admin-session-expired';
 
 function getApiUrl() {
   const configuredUrl = import.meta.env.VITE_API_URL?.trim();
-  const apiUrl = (configuredUrl || (import.meta.env.DEV ? 'http://127.0.0.1:3000' : '')).replace(/\/+$/, '');
-  if (!apiUrl) {
+  const defaultUrl = import.meta.env.DEV
+    ? 'http://127.0.0.1:3000'
+    : 'https://r3wi4h0vwr.c35.airoapp.ai';
+  const configuredLocalUrl = /^https?:\/\/(?:localhost|127\.0\.0\.1)(?::\d+)?(?:\/|$)/i
+    .test(configuredUrl || '');
+  const apiUrl = !import.meta.env.DEV && configuredLocalUrl
+    ? defaultUrl
+    : configuredUrl || defaultUrl;
+  const normalizedApiUrl = apiUrl.replace(/\/+$/, '');
+  if (!normalizedApiUrl) {
     throw new Error('Admin API is not configured. Set VITE_API_URL in the admin website environment.');
   }
-  return apiUrl;
+  return normalizedApiUrl;
 }
 
 async function fetchJson(path, { method = 'GET', body, token, window } = {}) {

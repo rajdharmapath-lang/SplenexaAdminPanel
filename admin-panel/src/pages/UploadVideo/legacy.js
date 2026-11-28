@@ -4,7 +4,7 @@
 import { populateCoursePlanSelect } from '../../coursePlans';
 
 export default function init(document, window, parent, setTimeout, setInterval) {
-populateCoursePlanSelect(document.getElementById('video-course-access'),window.sessionStorage);
+populateCoursePlanSelect(document.getElementById('video-course-access'), window);
 const videoDropzone=document.getElementById('video-dropzone');
 const videoFile=document.getElementById('video-file');
 const videoFileName=document.getElementById('video-file-name');

@@ -11,3 +11,7 @@ stored as scrypt hashes. Email format is validated, but the system does not
 send verification emails. Sessions are checked and revoked by the backend on
 logout. Never put backend credentials or account passwords in this website's
 environment files.
+
+For production builds, set `VITE_API_URL` to the publicly reachable backend
+origin if it differs from the configured production default. Loopback URLs such
+as `127.0.0.1` and `localhost` are ignored in production builds.

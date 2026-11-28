@@ -275,13 +275,10 @@ function PaymentsPage() {
                             Included Products
                           </th>
                           <th>
-                            Base Fee
+                            Actual Price
                           </th>
                           <th>
-                            Discount
-                          </th>
-                          <th>
-                            Final Fee
+                            Offer Price
                           </th>
                           <th>
                             Validity
@@ -756,7 +753,7 @@ function PaymentsPage() {
               <div className="form-field full">
                 <div className="pricing-options-heading">
                   <label>
-                    Duration and Price *
+                    Duration and Pricing *
                   </label>
                   <button className="button button-secondary" id="add-plan-duration" type="button">
                     ＋ Add duration
@@ -764,16 +761,10 @@ function PaymentsPage() {
                 </div>
                 <div className="plan-pricing-options" id="plan-pricing-options"></div>
                 <span className="form-hint">
-                  Add each duration in months with its price. The discount, if set, applies to every duration.
+                  Set the actual price and offer price for each duration.
                 </span>
                 <input id="fee-base" name="baseFee" type="hidden" value="0" readOnly />
                 <input id="fee-validity" name="validity" type="hidden" value="90" readOnly />
-              </div>
-              <div className="form-field">
-                <label htmlFor="fee-discount">
-                  Discount (%)
-                </label>
-                <input className="form-control" id="fee-discount" name="discount" type="number" min="0" max="100" step="0.01" defaultValue="0" />
               </div>
               <div className="form-field">
                 <label htmlFor="fee-mode">
@@ -805,35 +796,6 @@ function PaymentsPage() {
                 </select>
               </div>
             </div>
-            <div className="calculation-box">
-              <div className="calculation-row">
-                <span>
-                  First duration base fee
-                </span>
-                <strong id="fee-preview-base">
-                  ₹0.00
-                </strong>
-              </div>
-              <div className="calculation-row">
-                <span>
-                  Discount amount
-                </span>
-                <strong id="fee-preview-discount">
-                  −₹0.00
-                </strong>
-              </div>
-              <div className="calculation-row total">
-                <span>
-                  Final fee before taxes
-                </span>
-                <strong id="fee-preview-final">
-                  ₹0
-                </strong>
-              </div>
-            </div>
-            <p className="section-note">
-              Preview uses the shortest duration. The shared discount applies to each duration; checkout should use consistent server-side rounding and tax rules.
-            </p>
             <div className="modal-footer">
               <button className="button button-secondary" type="button" data-close-modal="">
                 Cancel
@@ -866,25 +828,25 @@ function PaymentsPage() {
           <div className="calculation-box">
             <div className="calculation-row">
               <span>
-                Shortest duration base fee
+                Actual price (shortest duration)
               </span>
               <strong id="preview-base"></strong>
             </div>
             <div className="calculation-row">
               <span>
-                Discount
+                You save
               </span>
               <strong id="preview-discount"></strong>
             </div>
             <div className="calculation-row total">
               <span>
-                Final fee before taxes
+                Offer price before taxes
               </span>
               <strong id="preview-final"></strong>
             </div>
           </div>
           <div className="info-note">
-            Publishing a fee plan here does not create backend pricing or checkout access. Implement server-side plan storage, validation, and payment entitlements before taking payments.
+            Published plans are stored in the backend and shown in the app. Razorpay checkout currently supports one-time plans only; test with Razorpay test credentials before enabling live payments.
           </div>
           <div className="modal-footer">
             <button className="button button-secondary" type="button" data-close-modal="">

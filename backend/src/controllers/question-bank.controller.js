@@ -5,6 +5,7 @@ const adminAccountRepository = require('../db/admin-account.repository');
 const adminSessionRepository = require('../db/admin-session.repository');
 const { getJwtSecret } = require('../middleware/auth.middleware');
 const { hashPassword, verifyPassword } = require('../services/admin-password');
+const feePlanRepository = require('../db/fee-plan.repository');
 
 function getSignupAccount(body) {
   if (!body || typeof body !== 'object' || Array.isArray(body)) {
@@ -160,19 +161,33 @@ function isCatalog(catalog) {
     (catalog.tests?.length ?? 0) <= 5000;
 }
 
-async function getPublicCatalog(_req, res, next) {
+async function getAppCatalog(req, res, next) {
   try {
-    const catalog = await questionBankRepository.getCatalog();
-    const activeProducts = catalog.products.filter((product) => product?.isActive === true);
-    const activeProductIds = new Set(activeProducts.map((product) => String(product.id)));
+    const [catalog, entitlements] = await Promise.all([
+      questionBankRepository.getCatalog(),
+      feePlanRepository.getUserEntitlements(req.user.id),
+    ]);
+    const entitledProductIds = new Set(
+      entitlements.flatMap((entitlement) => entitlement.productIds || []).map(String),
+    );
+    const products = catalog.products
+      .filter((product) => product?.isActive === true)
+      .map((product) => ({
+        ...product,
+        hasAccess: String(product.accessType || '').toLowerCase() === 'free' ||
+          entitledProductIds.has(String(product.id)),
+      }));
+    const accessibleProductIds = new Set(
+      products.filter((product) => product.hasAccess).map((product) => String(product.id)),
+    );
     return res.json({
-      products: activeProducts,
-      subjects: catalog.subjects.filter((subject) => activeProductIds.has(String(subject?.productId))),
+      products,
+      subjects: catalog.subjects.filter((subject) => accessibleProductIds.has(String(subject?.productId))),
       questions: catalog.questions.filter((question) =>
-        activeProductIds.has(String(question?.productId)) &&
+        accessibleProductIds.has(String(question?.productId)) &&
         String(question?.status || 'Active').toLowerCase() === 'active',
       ),
-      tests: catalog.tests.filter((test) => activeProductIds.has(String(test?.productId))),
+      tests: catalog.tests.filter((test) => accessibleProductIds.has(String(test?.productId))),
     });
   } catch (error) {
     return next(error);
@@ -218,7 +233,7 @@ module.exports = {
   loginAdmin,
   getAdminSession,
   logoutAdmin,
-  getPublicCatalog,
+  getAppCatalog,
   getAdminCatalog,
   saveAdminCatalog,
 };

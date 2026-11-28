@@ -1,7 +1,8 @@
 // Behaviour carried over unchanged from the original HTML page.
 // Runs once after the JSX markup mounts; `document`, `window`, `parent` and timers are
 // scoped shims provided by useLegacyScript (see src/legacy/useLegacyScript.js).
-import { COURSE_PLANS_STORAGE_KEY, DEFAULT_COURSE_PLANS, readCoursePlans } from '../../coursePlans';
+import { deleteAdminFeePlan, loadAdminFeePlans, saveAdminFeePlan } from '../../services/feePlanApi';
+import { loadAdminCatalog } from '../../services/questionBankApi';
 
 export default function init(document, window, parent, setTimeout, setInterval) {
 const DAY_MS = 86400000;
@@ -16,12 +17,9 @@ const DAY_MS = 86400000;
       { id: "image-based-test", name: "Image Based", validity: 365, activation: "After payment verification", status: "Active" },
       { id: "video-library", name: "Video", validity: 365, activation: "After payment verification", status: "Active" }
     ];
-    const plans = DEFAULT_COURSE_PLANS.map(plan => ({ ...plan, productIds: [...plan.productIds] }));
-    try {
-      plans.splice(0, plans.length, ...readCoursePlans(window.sessionStorage));
-    } catch (error) {
-      console.error("Could not load saved fee plans.", error);
-    }
+    const plans = [];
+    let plansLoaded = false;
+    let plansLoadError = "";
     const students = [
       { id: "STU-001", name: "Neha Gupta", email: "neha.gupta@gmail.com" },
       { id: "STU-002", name: "Karan Mehta", email: "karan.mehta@yahoo.com" },
@@ -95,11 +93,24 @@ const DAY_MS = 86400000;
     }
     function statusClass(status) { return String(status).toLowerCase().replace(/\s+/g, "-"); }
     function pricingOptionsFor(plan) {
+      const discount = Math.min(100, Math.max(0, Number(plan.discount) || 0));
       const options = Array.isArray(plan.pricingOptions)
-        ? plan.pricingOptions.filter(option => Number.isInteger(Number(option.months)) && Number(option.months) > 0 && Number.isFinite(Number(option.price)) && Number(option.price) >= 0)
+        ? plan.pricingOptions
+          .filter(option => Number.isInteger(Number(option.months)) && Number(option.months) > 0 && Number.isFinite(Number(option.offerPrice ?? option.price)) && Number(option.offerPrice ?? option.price) >= 0)
+          .map(option => {
+            const actualPrice = Number.isFinite(Number(option.actualPrice)) && option.actualPrice !== ""
+              ? Number(option.actualPrice)
+              : Number(option.price ?? option.offerPrice);
+            const offerPrice = option.offerPrice !== undefined && option.offerPrice !== null && option.offerPrice !== ""
+              ? Number(option.offerPrice)
+              : actualPrice * (1 - discount / 100);
+            return { ...option, actualPrice, offerPrice, price: offerPrice };
+          })
         : [];
       if (options.length) return [...options].sort((a, b) => Number(a.months) - Number(b.months));
-      return [{ months: Math.max(1, Math.round(Number(plan.validity || 90) / 30)), price: Math.max(0, Number(plan.baseFee) || 0) }];
+      const actualPrice = Math.max(0, Number(plan.baseFee) || 0);
+      const offerPrice = actualPrice * (1 - discount / 100);
+      return [{ months: Math.max(1, Math.round(Number(plan.validity || 90) / 30)), actualPrice, offerPrice, price: offerPrice }];
     }
     function productValidity() { return 365; }
     function productIcon(product) {
@@ -175,21 +186,25 @@ const DAY_MS = 86400000;
         });
       });
     }
+    async function refreshQuestionBankProducts() {
+      const catalog = await loadAdminCatalog(window);
+      window.sessionStorage.setItem("fmge-question-bank-products", JSON.stringify(catalog.products));
+      window.sessionStorage.setItem("fmge-question-bank-subjects", JSON.stringify(catalog.subjects));
+      window.sessionStorage.setItem("fmge-question-bank-tests", JSON.stringify(catalog.tests));
+      syncQuestionBankProducts();
+    }
     function closeModals() {
       document.querySelectorAll(".modal-backdrop.is-open").forEach(modal => modal.classList.remove("is-open"));
       document.body.style.overflow = "";
     }
     function getProduct(productId) { return products.find(product => product.id === productId); }
     function getPlan(planId) { return plans.find(plan => plan.id === planId); }
-    function persistPlans() {
-      try {
-        window.sessionStorage.setItem(COURSE_PLANS_STORAGE_KEY, JSON.stringify(plans));
-        return true;
-      } catch (error) {
-        console.error("Could not persist fee plan changes.", error);
-        showToast("Fee plan could not be saved in this browser. Check available storage and try again.");
-        return false;
-      }
+    async function reloadFeePlans() {
+      plansLoadError = "";
+      const savedPlans = await loadAdminFeePlans(window);
+      plans.splice(0, plans.length, ...savedPlans);
+      plansLoaded = true;
+      renderFees();
     }
     function planSubjectsFor(plan, productId) {
       const product = getProduct(productId);
@@ -233,17 +248,16 @@ const DAY_MS = 86400000;
           const testLabel = product.fromQuestionBank ? `${includedTests.length} of ${product.tests.length} tests` : "";
           return `<div>${escapeHtml(product.name)}${product.subjects ? `<details class="subject-dropdown"><summary>${subjectLabel}</summary><span>${includedSubjects.map(escapeHtml).join(" · ") || "No subjects selected"}</span></details>` : ""}${product.fromQuestionBank ? `<details class="subject-dropdown"><summary>${escapeHtml(testLabel)}</summary><span>${includedTests.map(test => escapeHtml(test.title)).join(" · ") || "No tests selected"}</span></details>` : ""}</div>`;
         }).join("")}</div>` : "Add products before publishing";
-        const planIsPriced = pricingOptions.some(option => Number(option.price) > 0);
-        const discount = Number(plan.discount) || 0;
-        const basePrices = planIsPriced ? `<div class="plan-price-list">${pricingOptions.map(option => `<span>${option.months} mo · ${formatRupees(option.price)}</span>`).join("")}</div>` : "Not set";
-        const finalPrices = planIsPriced ? `<div class="plan-price-list">${pricingOptions.map(option => `<span>${option.months} mo · ${formatRupees(Math.round(option.price * (1 - discount / 100)))}</span>`).join("")}</div>` : "Not set";
+        const planIsPriced = pricingOptions.some(option => Number(option.offerPrice) > 0);
+        const actualPrices = planIsPriced ? `<div class="plan-price-list">${pricingOptions.map(option => `<span>${option.months} mo · ${formatRupees(option.actualPrice)}</span>`).join("")}</div>` : "Not set";
+        const offerPrices = planIsPriced ? `<div class="plan-price-list">${pricingOptions.map(option => `<span>${option.months} mo · ${formatRupees(option.offerPrice)}</span>`).join("")}</div>` : "Not set";
         return `
-        <tr><td><strong>${escapeHtml(plan.name)}</strong>${plan.description ? `<small class="plan-description-cell">${escapeHtml(plan.description)}</small>` : ""}</td><td>${productsLabel}</td><td class="money">${basePrices}</td>
-          <td>${planIsPriced ? `${discount}%` : "—"}</td><td class="money"><strong>${finalPrices}</strong></td><td>${pricingOptions.map(option => `${option.months} mo`).join(" / ")}</td>
+        <tr><td><strong>${escapeHtml(plan.name)}</strong>${plan.description ? `<small class="plan-description-cell">${escapeHtml(plan.description)}</small>` : ""}</td><td>${productsLabel}</td><td class="money">${actualPrices}</td>
+          <td class="money"><strong>${offerPrices}</strong></td><td>${pricingOptions.map(option => `${option.months} mo`).join(" / ")}</td>
           <td>${escapeHtml(plan.paymentMode)}</td><td><span class="status-pill ${statusClass(plan.status)}">${escapeHtml(plan.status)}</span></td>
           <td><div class="fee-actions"><button class="round-action" type="button" data-action="edit-fee" data-id="${plan.id}" aria-label="Edit ${escapeHtml(plan.name)}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m15 5 4 4M4 20l4-.8L19 8a2.1 2.1 0 0 0-3-3L5 16l-1 4Z"/></svg></button><button class="round-action" type="button" data-action="preview-fee" data-id="${plan.id}" aria-label="Preview ${escapeHtml(plan.name)}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg></button><div class="more-wrap"><button class="round-action" type="button" data-action="more-fee" data-id="${plan.id}" aria-label="More actions for ${escapeHtml(plan.name)}" aria-expanded="false"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="12" cy="19" r="1.8"/></svg></button><div class="more-menu" data-fee-menu="${plan.id}" hidden><button type="button" data-action="toggle-fee" data-id="${plan.id}">${plan.status === "Published" ? "Unpublish plan" : "Publish plan"}</button><button type="button" class="danger-action" data-action="delete-fee" data-id="${plan.id}">Delete plan</button></div></div></div></td>
         </tr>`;
-      }).join("") : '<tr class="empty-row"><td colspan="9">No fee plans match your search.</td></tr>';
+      }).join("") : `<tr class="empty-row"><td colspan="8">${plansLoaded ? (plansLoadError ? escapeHtml(plansLoadError) : "No fee plans match your search.") : "Loading fee plans…"}</td></tr>`;
     }
 
     function renderAccessSummary() {
@@ -439,7 +453,8 @@ const DAY_MS = 86400000;
       container.innerHTML = options.map((option, index) => `
         <div class="plan-pricing-row">
           <label>Duration (months)<input class="form-control" type="number" min="1" step="1" required data-pricing-months value="${escapeHtml(option.months)}"></label>
-          <label>Price (₹)<input class="form-control" type="number" min="0" step="1" required data-pricing-price value="${option.price === "" ? "" : escapeHtml(option.price)}"></label>
+          <label>Actual Price (₹)<input class="form-control" type="number" min="0" step="1" required data-pricing-actual-price value="${option.actualPrice === "" ? "" : escapeHtml(option.actualPrice)}"></label>
+          <label>Offer Price (₹)<input class="form-control" type="number" min="0" step="1" required data-pricing-offer-price value="${option.offerPrice === "" ? "" : escapeHtml(option.offerPrice)}"></label>
           <button class="button button-secondary" type="button" data-remove-duration="${index}" aria-label="Remove duration row" ${options.length === 1 ? "disabled" : ""}>Remove</button>
         </div>`).join("");
       syncPricingFields();
@@ -447,12 +462,13 @@ const DAY_MS = 86400000;
     function readPricingOptions() {
       return Array.from(document.querySelectorAll("#plan-pricing-options .plan-pricing-row")).map(row => ({
         months: row.querySelector("[data-pricing-months]").value,
-        price: row.querySelector("[data-pricing-price]").value
+        actualPrice: row.querySelector("[data-pricing-actual-price]").value,
+        offerPrice: row.querySelector("[data-pricing-offer-price]").value
       }));
     }
     function syncPricingFields() {
       const firstOption = readPricingOptions()
-        .map(option => ({ months: Number(option.months), price: Number(option.price) }))
+        .map(option => ({ months: Number(option.months), price: Number(option.offerPrice) }))
         .filter(option => Number.isInteger(option.months) && option.months > 0)
         .sort((a, b) => a.months - b.months)[0];
       const form = document.getElementById("fee-form");
@@ -461,20 +477,26 @@ const DAY_MS = 86400000;
       form.elements.baseFee.value = Number.isFinite(price) ? String(price) : "0";
       form.elements.validity.value = Number.isInteger(months) && months > 0 ? String(months * 30) : "30";
     }
-    function openFeeForm(plan = null) {
+    async function openFeeForm(plan = null) {
+      try {
+        await refreshQuestionBankProducts();
+      } catch (error) {
+        console.error("Could not load Question Bank products for fee plan selection.", error);
+        showToast(`Question Bank products could not be loaded: ${error.message}`);
+        return;
+      }
       syncQuestionBankProducts();
       editingPlanId = plan ? plan.id : null;
       const form = document.getElementById("fee-form");
       form.reset();
       document.getElementById("fee-product").innerHTML = `<option value="">Choose a product to add</option>${products.map(item => `<option value="${escapeHtml(item.id)}" ${item.status === "Inactive" ? "disabled" : ""}>${escapeHtml(item.name)}${item.fromQuestionBank ? " · Question Bank" : ""}${item.status === "Inactive" ? " · Inactive" : ""}</option>`).join("")}`;
       document.getElementById("fee-modal-title").textContent = plan ? "Edit Fee Plan" : "Create Fee Plan";
-      document.getElementById("fee-modal-description").textContent = plan ? "Update the plan description, included products, and duration-based prices." : "Describe the plan, add included products, and set a price for each duration.";
+      document.getElementById("fee-modal-description").textContent = plan ? "Update the plan description, included products, and duration-based prices." : "Describe the plan, add included products, and set actual and offer prices for each duration.";
       document.getElementById("fee-save-button").textContent = plan ? "Save Changes" : "Create Fee Plan";
       if (plan) {
         form.elements.planName.value = plan.name;
         form.elements.description.value = plan.description || "";
         form.elements.baseFee.value = plan.baseFee || 0;
-        form.elements.discount.value = plan.discount;
         form.elements.validity.value = plan.validity || 90;
         form.elements.paymentMode.value = plan.paymentMode === "One-time" ? "One-time payment" : plan.paymentMode;
         form.elements.status.value = plan.status;
@@ -485,7 +507,6 @@ const DAY_MS = 86400000;
         form.elements.planName.value = "";
         form.elements.description.value = "";
         form.elements.baseFee.value = "0";
-        form.elements.discount.value = "0";
         form.elements.validity.value = "90";
         form.elements.paymentMode.value = "One-time payment";
         form.elements.status.value = "Draft";
@@ -494,26 +515,16 @@ const DAY_MS = 86400000;
         selectedPlanTests = {};
       }
       renderPricingOptions(plan ? pricingOptionsFor(plan) : [
-        { months: 3, price: "" },
-        { months: 6, price: "" },
-        { months: 12, price: "" }
+        { months: 3, actualPrice: "", offerPrice: "" },
+        { months: 6, actualPrice: "", offerPrice: "" },
+        { months: 12, actualPrice: "", offerPrice: "" }
       ]);
       renderPlanProductChips();
       document.getElementById("fee-product").value = "";
-      updateFeePreview();
+      syncPricingFields();
       document.getElementById("fee-modal").classList.add("is-open");
       document.body.style.overflow = "hidden";
       document.getElementById("fee-plan-name").focus();
-    }
-    function updateFeePreview() {
-      const form = document.getElementById("fee-form");
-      syncPricingFields();
-      const base = Math.max(0, Number(form.elements.baseFee.value) || 0);
-      const discount = Math.min(100, Math.max(0, Number(form.elements.discount.value) || 0));
-      const discountAmount = base * discount / 100;
-      document.getElementById("fee-preview-base").textContent = formatRupees(base, 2);
-      document.getElementById("fee-preview-discount").textContent = `−${formatRupees(discountAmount, 2)}`;
-      document.getElementById("fee-preview-final").textContent = formatRupees(Math.round(base - discountAmount));
     }
     function previewFeePlan(plan) {
       const pricingOptions = pricingOptionsFor(plan);
@@ -526,16 +537,16 @@ const DAY_MS = 86400000;
           const tests = planTestsFor(plan, id);
           return `${product.name}${product.fromQuestionBank ? ` (${tests.map(test => test.title).join(", ") || "No tests enabled"})` : ""}`;
         }).filter(Boolean).join(", ") || "No products added"],
-        ["Durations and prices", pricingOptions.map(option => `${option.months} months · ${formatRupees(option.price)}`).join(", ")],
+        ["Durations and prices", pricingOptions.map(option => `${option.months} months · Actual ${formatRupees(option.actualPrice)} · Offer ${formatRupees(option.offerPrice)}`).join(", ")],
         ["Payment model", plan.paymentMode],
-        ["Discount", `${plan.discount}%`], ["Status", plan.status]
+        ["Status", plan.status]
       ];
       document.getElementById("preview-title").textContent = plan.name;
       document.getElementById("fee-preview-details").innerHTML = details.map(([label, value]) => `<div class="detail-item"><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong></div>`).join("");
       const firstOption = pricingOptions[0];
-      document.getElementById("preview-base").textContent = formatRupees(firstOption.price, 2);
-      document.getElementById("preview-discount").textContent = `${plan.discount}% · −${formatRupees(firstOption.price * plan.discount / 100, 2)}`;
-      document.getElementById("preview-final").textContent = formatRupees(Math.round(firstOption.price * (1 - plan.discount / 100)));
+      document.getElementById("preview-base").textContent = formatRupees(firstOption.actualPrice, 2);
+      document.getElementById("preview-discount").textContent = formatRupees(firstOption.actualPrice - firstOption.offerPrice, 2);
+      document.getElementById("preview-final").textContent = formatRupees(firstOption.offerPrice);
       document.getElementById("preview-modal").classList.add("is-open");
       document.body.style.overflow = "hidden";
     }
@@ -611,11 +622,9 @@ const DAY_MS = 86400000;
       transactionPage = 1;
       renderTransactions();
     });
-    document.getElementById("fee-form").addEventListener("input", updateFeePreview);
-    document.getElementById("fee-form").addEventListener("change", updateFeePreview);
     document.getElementById("add-plan-duration").addEventListener("click", () => {
       const options = readPricingOptions();
-      options.push({ months: "", price: "" });
+      options.push({ months: "", actualPrice: "", offerPrice: "" });
       renderPricingOptions(options);
       document.getElementById("plan-pricing-options").lastElementChild.querySelector("[data-pricing-months]").focus();
     });
@@ -626,30 +635,36 @@ const DAY_MS = 86400000;
       if (options.length <= 1) return;
       options.splice(Number(button.dataset.removeDuration), 1);
       renderPricingOptions(options);
-      updateFeePreview();
+      syncPricingFields();
     });
-    document.getElementById("fee-form").addEventListener("submit", event => {
+    document.getElementById("fee-form").addEventListener("submit", async event => {
       event.preventDefault();
       const form = event.currentTarget;
       if (!form.reportValidity()) return;
       const planName = form.elements.planName.value.trim();
       const pricingOptions = readPricingOptions().map(option => ({
         months: Number(option.months),
-        price: Number(option.price)
+        actualPrice: Number(option.actualPrice),
+        offerPrice: Number(option.offerPrice),
+        price: Number(option.offerPrice)
       })).sort((a, b) => a.months - b.months);
       if (!planName) {
         showToast("Enter a plan name.");
         return;
       }
-      if (!pricingOptions.length || pricingOptions.some(option => !Number.isInteger(option.months) || option.months < 1 || !Number.isFinite(option.price) || option.price < 0)) {
-        showToast("Enter a valid duration in months and price for each option.");
+      if (!pricingOptions.length || pricingOptions.some(option => !Number.isInteger(option.months) || option.months < 1 || !Number.isFinite(option.actualPrice) || option.actualPrice < 0 || !Number.isFinite(option.offerPrice) || option.offerPrice < 0)) {
+        showToast("Enter a valid duration, actual price, and offer price for each option.");
+        return;
+      }
+      if (pricingOptions.some(option => option.offerPrice > option.actualPrice)) {
+        showToast("Offer price cannot be greater than actual price.");
         return;
       }
       if (new Set(pricingOptions.map(option => option.months)).size !== pricingOptions.length) {
         showToast("Each duration must be unique.");
         return;
       }
-      const existing = editingPlanId ? getPlan(editingPlanId) : plans.find(item => item.name.toLowerCase() === planName.toLowerCase());
+      const existing = editingPlanId ? getPlan(editingPlanId) : null;
       if (!selectedPlanProductIds.length) {
         showToast("Add at least one product to this plan.");
         return;
@@ -658,17 +673,16 @@ const DAY_MS = 86400000;
         showToast("Select at least one subject for each subject-based product.");
         return;
       }
-      if (form.elements.status.value === "Published" && pricingOptions.some(option => option.price <= 0)) {
-        showToast("Set a price above ₹0 for every duration before publishing this plan.");
+      if (form.elements.status.value === "Published" && pricingOptions.some(option => option.actualPrice <= 0 || option.offerPrice <= 0)) {
+        showToast("Set both prices above ₹0 for every duration before publishing this plan.");
         return;
       }
       if (plans.some(item => item.name.toLowerCase() === planName.toLowerCase() && item.id !== editingPlanId)) {
         showToast("A plan already exists with that name.");
         return;
       }
-      const previousPlan = existing ? { ...existing } : null;
-      const plan = existing || { id: `plan-${Date.now()}` };
-      Object.assign(plan, {
+      const plan = {
+        ...(existing ? { id: existing.id } : {}),
         name: planName,
         description: form.elements.description.value.trim(),
         productIds: [...selectedPlanProductIds],
@@ -679,28 +693,29 @@ const DAY_MS = 86400000;
           .filter(id => getProduct(id)?.fromQuestionBank)
           .map(id => [id, [...(selectedPlanTests[id] || [])]])),
         pricingOptions,
-        baseFee: pricingOptions[0].price,
-        discount: Number(form.elements.discount.value) || 0,
+        baseFee: pricingOptions[0].offerPrice,
+        discount: 0,
         validity: pricingOptions[0].months * 30,
         paymentMode: form.elements.paymentMode.value === "One-time payment" ? "One-time" : form.elements.paymentMode.value,
         activation: "After payment verification",
         status: form.elements.status.value
-      });
-      if (!existing) plans.push(plan);
-      if (!persistPlans()) {
-        if (existing) {
-          Object.keys(plan).forEach(key => delete plan[key]);
-          Object.assign(plan, previousPlan);
-        } else {
-          plans.pop();
-        }
+      };
+      let savedPlan;
+      try {
+        savedPlan = await saveAdminFeePlan(plan, window);
+      } catch (error) {
+        console.error("Could not save fee plan to the database.", error);
+        showToast(error.message);
         return;
       }
+      const existingIndex = existing ? plans.indexOf(existing) : -1;
+      if (existingIndex >= 0) plans[existingIndex] = savedPlan;
+      else plans.unshift(savedPlan);
       closeModals();
       renderFees();
       renderChart();
       setTab("fees");
-      showToast(existing ? `${plan.name} updated with ${plan.productIds.length} products in this preview.` : `${plan.name} created with ${plan.productIds.length} products in this preview.`);
+      showToast(existing ? `${savedPlan.name} updated.` : `${savedPlan.name} created.`);
       editingPlanId = null;
       selectedPlanProductIds = [];
     });
@@ -765,7 +780,7 @@ const DAY_MS = 86400000;
       delete selectedPlanTests[button.dataset.removePlanProduct];
       renderPlanProductChips();
     });
-    document.getElementById("fee-rows").addEventListener("click", event => {
+    document.getElementById("fee-rows").addEventListener("click", async event => {
       const button = event.target.closest("[data-action]");
       if (!button) return;
       const plan = getPlan(button.dataset.id);
@@ -784,28 +799,40 @@ const DAY_MS = 86400000;
       } else if (button.dataset.action === "edit-fee") openFeeForm(plan);
       else if (button.dataset.action === "preview-fee") previewFeePlan(plan);
       else if (button.dataset.action === "toggle-fee") {
-        if (plan.status !== "Published" && (!plan.productIds.length || plan.baseFee <= 0)) {
-          showToast("Add products and set a price above ₹0 for every duration before publishing this plan.");
+        if (plan.status !== "Published" && (
+          !plan.productIds.length ||
+          plan.pricingOptions.some(option => option.actualPrice <= 0 || option.offerPrice <= 0)
+        )) {
+          showToast("Add products and set both prices above ₹0 for every duration before publishing this plan.");
           return;
         }
-        const previousStatus = plan.status;
-        plan.status = plan.status === "Published" ? "Draft" : "Published";
-        if (!persistPlans()) {
-          plan.status = previousStatus;
+        const updatedPlan = {
+          ...plan,
+          status: plan.status === "Published" ? "Draft" : "Published",
+        };
+        let savedPlan;
+        try {
+          savedPlan = await saveAdminFeePlan(updatedPlan, window);
+        } catch (error) {
+          console.error("Could not update fee plan status in the database.", error);
+          showToast(error.message);
           return;
         }
+        plans[plans.indexOf(plan)] = savedPlan;
         renderFees(); renderChart();
-        showToast(`${plan.name} is now ${plan.status.toLowerCase()} in this preview.`);
+        showToast(`${savedPlan.name} is now ${savedPlan.status.toLowerCase()}.`);
       } else if (button.dataset.action === "delete-fee") {
-        if (!window.confirm(`Delete ${plan.name} from this preview?`)) return;
-        const planIndex = plans.indexOf(plan);
-        plans.splice(planIndex, 1);
-        if (!persistPlans()) {
-          plans.splice(planIndex, 0, plan);
+        if (!window.confirm(`Delete ${plan.name}?`)) return;
+        try {
+          await deleteAdminFeePlan(plan.id, window);
+        } catch (error) {
+          console.error("Could not delete fee plan from the database.", error);
+          showToast(error.message);
           return;
         }
+        plans.splice(plans.indexOf(plan), 1);
         renderFees(); renderChart();
-        showToast(`${plan.name} removed from this preview.`);
+        showToast(`${plan.name} deleted.`);
       }
     });
     document.getElementById("access-search").addEventListener("input", renderAccessTable);
@@ -971,7 +998,9 @@ const DAY_MS = 86400000;
       renderCoupons();
       showToast(`${coupon.code} is now ${coupon.status.toLowerCase()} in this preview.`);
     });
-    document.querySelectorAll("[data-action='create-fee']").forEach(button => button.addEventListener("click", () => openFeeForm()));
+    document.querySelectorAll("[data-action='create-fee']").forEach(button => button.addEventListener("click", () => {
+      openFeeForm();
+    }));
     document.querySelectorAll("[data-action='grant-access']").forEach(button => button.addEventListener("click", openAccessModal));
     document.querySelectorAll("[data-action='create-coupon']").forEach(button => button.addEventListener("click", () => {
       const form = document.getElementById("coupon-form");
@@ -1005,7 +1034,6 @@ const DAY_MS = 86400000;
         document.getElementById("notification-button").setAttribute("aria-label", "Notifications, no unread alerts");
       }
     });
-    document.getElementById("profile-button").addEventListener("click", () => showToast("Admin profile menu is a UI preview."));
     document.addEventListener("keydown", event => { if (event.key === "Escape") closeModals(); });
 
     renderFees();
@@ -1015,4 +1043,13 @@ const DAY_MS = 86400000;
     renderCoupons();
     updateSummary();
     renderChart();
+    reloadFeePlans()
+      .then(() => renderAccessTable())
+      .catch(error => {
+        console.error("Could not load fee plans from the database.", error);
+        plansLoaded = true;
+        plansLoadError = error.message;
+        renderFees();
+        showToast(error.message);
+      });
 }

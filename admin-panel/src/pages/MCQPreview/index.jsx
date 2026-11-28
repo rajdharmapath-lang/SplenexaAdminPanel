@@ -1,33 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
 import { normalizeBootstrapIcon, normalizeImageUrl } from '../../utils/iconValue';
+import { loadAdminCatalog } from '../../services/questionBankApi';
 import './styles.css';
 
-const STORAGE_KEYS = {
-  products: 'fmge-question-bank-products',
-  subjects: 'fmge-question-bank-subjects',
-  questions: 'fmge-question-bank-questions',
-  tests: 'fmge-question-bank-tests',
-};
 const ALLOWED_HTML_TAGS = new Set([
   'P', 'BR', 'STRONG', 'B', 'EM', 'I', 'U', 'SUB', 'SUP',
   'UL', 'OL', 'LI', 'TABLE', 'THEAD', 'TBODY', 'TR', 'TH', 'TD', 'IMG',
 ]);
-
-function readArray(key) {
-  const raw = window.sessionStorage.getItem(key);
-  if (!raw) return [];
-  const value = JSON.parse(raw);
-  if (!Array.isArray(value)) throw new TypeError(`Saved ${key} data must be an array.`);
-  return value;
-}
-
-function loadQuestionBank() {
-  const products = readArray(STORAGE_KEYS.products);
-  const subjects = readArray(STORAGE_KEYS.subjects);
-  const questions = readArray(STORAGE_KEYS.questions);
-  const tests = readArray(STORAGE_KEYS.tests);
-  return { products, subjects, questions, tests };
-}
 
 function isAvailable(question) {
   const answer = Number(question.answer);
@@ -401,12 +380,20 @@ export default function MCQPreviewPage() {
   const [completedSubjects, setCompletedSubjects] = useState([]);
 
   useEffect(() => {
-    try {
-      setData(loadQuestionBank());
-    } catch (error) {
-      console.error('Could not load Question Bank data for MCQ Preview.', error);
-      setLoadError('Question Bank data could not be loaded. Check the saved products, subjects, questions, and tests, then reload this page.');
-    }
+    let active = true;
+    loadAdminCatalog(window)
+      .then(catalog => {
+        if (active) setData(catalog);
+      })
+      .catch(error => {
+        console.error('Could not load Question Bank data for MCQ Preview.', error);
+        if (active) {
+          setLoadError(`Question Bank data could not be loaded. ${error.message}`);
+        }
+      });
+    return () => {
+      active = false;
+    };
   }, []);
 
   const products = useMemo(() => (data?.products || []).filter(product =>

@@ -1,6 +1,7 @@
 const express = require('express');
 const { rateLimit } = require('express-rate-limit');
 const questionBankController = require('../controllers/question-bank.controller');
+const { requireAuth } = require('../middleware/auth.middleware');
 const { requireQuestionBankAdmin } = require('../middleware/question-bank-admin.middleware');
 
 const router = express.Router();
@@ -20,7 +21,7 @@ const signupRateLimit = rateLimit({
   message: { message: 'Too many signup attempts. Please wait and try again.' },
 });
 
-router.get('/', questionBankController.getPublicCatalog);
+router.get('/', requireAuth, questionBankController.getAppCatalog);
 
 adminRouter.post('/login', loginRateLimit, questionBankController.loginAdmin);
 adminRouter.post('/signup', signupRateLimit, questionBankController.signUpAdmin);

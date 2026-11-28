@@ -4,6 +4,7 @@ const assert = require('node:assert/strict');
 const supabase = require('../src/db/supabase');
 const controller = require('../src/controllers/question-bank.controller');
 const repository = require('../src/db/question-bank.repository');
+const feePlanRepository = require('../src/db/fee-plan.repository');
 
 test('catalog reads product rows and maps them to the Question Bank API shape', async () => {
   const storedProduct = {
@@ -145,32 +146,43 @@ test('catalog reads product rows and maps them to the Question Bank API shape', 
   }
 });
 
-test('public catalog exposes tests only for active products', async () => {
+test('app catalog exposes only entitled or free Question Bank content', async () => {
   mock.method(repository, 'getCatalog', async () => ({
     products: [
-      { id: 'active-product', isActive: true },
+      { id: 'paid-product', name: 'Paid product', accessType: 'Paid', isActive: true },
+      { id: 'free-product', name: 'Free product', accessType: 'Free', isActive: true },
+      { id: 'unpaid-product', name: 'Unpaid product', accessType: 'Paid', isActive: true },
       { id: 'inactive-product', isActive: false },
     ],
     subjects: [
-      { id: 'active-subject', productId: 'active-product' },
+      { id: 'paid-subject', productId: 'paid-product' },
+      { id: 'free-subject', productId: 'free-product' },
+      { id: 'unpaid-subject', productId: 'unpaid-product' },
       { id: 'inactive-subject', productId: 'inactive-product' },
     ],
     questions: [
       {
-        id: 'active-question',
-        productId: 'active-product',
+        id: 'paid-question',
+        productId: 'paid-product',
         status: 'Active',
         answer: null,
         difficulty: 'Medium',
         tags: ['cardiology'],
       },
+      { id: 'free-question', productId: 'free-product', status: 'Active' },
+      { id: 'unpaid-question', productId: 'unpaid-product', status: 'Active' },
       { id: 'inactive-question', productId: 'inactive-product', status: 'Active' },
     ],
     tests: [
-      { id: 'active-test', productId: 'active-product' },
+      { id: 'paid-test', productId: 'paid-product' },
+      { id: 'free-test', productId: 'free-product' },
+      { id: 'unpaid-test', productId: 'unpaid-product' },
       { id: 'inactive-test', productId: 'inactive-product' },
     ],
   }));
+  mock.method(feePlanRepository, 'getUserEntitlements', async () => [
+    { productIds: ['paid-product'] },
+  ]);
   const response = {
     statusCode: 200,
     status(code) { this.statusCode = code; return this; },
@@ -178,18 +190,22 @@ test('public catalog exposes tests only for active products', async () => {
   };
 
   try {
-    await controller.getPublicCatalog({}, response, (error) => { throw error; });
-    assert.deepEqual(response.body.products.map((item) => item.id), ['active-product']);
-    assert.deepEqual(response.body.subjects.map((item) => item.id), ['active-subject']);
+    await controller.getAppCatalog({ user: { id: 'user-1' } }, response, (error) => { throw error; });
+    assert.deepEqual(response.body.products.map((item) => [item.id, item.hasAccess]), [
+      ['paid-product', true],
+      ['free-product', true],
+      ['unpaid-product', false],
+    ]);
+    assert.deepEqual(response.body.subjects.map((item) => item.id), ['paid-subject', 'free-subject']);
     assert.deepEqual(response.body.questions, [{
-      id: 'active-question',
-      productId: 'active-product',
+      id: 'paid-question',
+      productId: 'paid-product',
       status: 'Active',
       answer: null,
       difficulty: 'Medium',
       tags: ['cardiology'],
-    }]);
-    assert.deepEqual(response.body.tests.map((item) => item.id), ['active-test']);
+    }, { id: 'free-question', productId: 'free-product', status: 'Active' }]);
+    assert.deepEqual(response.body.tests.map((item) => item.id), ['paid-test', 'free-test']);
   } finally {
     mock.restoreAll();
   }

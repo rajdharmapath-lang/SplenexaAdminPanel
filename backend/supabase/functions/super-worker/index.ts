@@ -26,6 +26,7 @@ const indianStates = new Set([
   "Mizoram",
   "Nagaland",
   "Odisha",
+  "Puducherry",
   "Punjab",
   "Rajasthan",
   "Sikkim",
@@ -42,7 +43,6 @@ const indianStates = new Set([
   "Jammu and Kashmir",
   "Ladakh",
   "Lakshadweep",
-  "Puducherry",
 ]);
 
 const userColumns = "id, dial_code, phone, name, state, batch_year, profile_completed";

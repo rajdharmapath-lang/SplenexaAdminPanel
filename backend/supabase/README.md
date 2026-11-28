@@ -32,8 +32,23 @@
    `backend/supabase/migrations/20261123000100_create_admin_sessions.sql` to
    enable server-side session verification and revocation when a user logs out.
    Each user gets an eight-hour session; the app reads active products and
-   questions from `GET /api/question-bank`.
-6. Install the Supabase CLI, authenticate, and link the `backend/` directory to
+   questions from `GET /api/question-bank`. Apply
+   `backend/supabase/migrations/20261127000000_create_app_users.sql` to create
+   the app-user table used by authenticated purchases.
+6. Apply `backend/supabase/migrations/20261128000000_create_fee_plans_and_checkout.sql`
+   after the app-user migration. It creates protected fee-plan, duration-price,
+   Razorpay order/transaction, and purchased-plan entitlement tables. Fee plans
+   are managed through the authenticated admin API and published plans are
+   returned by `GET /api/fee-plans`.
+7. Configure `RAZORPAY_KEY_ID` and `RAZORPAY_KEY_SECRET` only in the backend
+   environment. Start with Razorpay test credentials and keep
+   `RAZORPAY_ALLOW_LIVE=false`; live checkout requires setting it to `true`
+   after testing. The mobile app uses only the public Key ID returned for a
+   server-created order. The backend verifies Razorpay's signature and
+   captured amount before recording a purchase. Mobile checkout currently
+   supports one-time plans; subscription and installment payment flows are not
+   implemented.
+8. Install the Supabase CLI, authenticate, and link the `backend/` directory to
    the Splenexa Supabase project. Create an untracked
    `backend/supabase/.env.edge` file containing the same Splenexa `JWT_SECRET` used by the Express backend
    and the non-JWT `SUPABASE_SECRET_KEY`, then set them as Edge Function
