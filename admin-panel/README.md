@@ -25,6 +25,8 @@ For production builds, set `VITE_API_URL` to the publicly reachable backend
 origin if it differs from the configured production default. Loopback URLs such
 as `127.0.0.1` and `localhost` are ignored in production builds.
 
-Admin modules use clean paths such as `/fmge-payments`. The production build
-includes an Apache rewrite rule so direct visits and refreshes on these paths
-serve the SPA entry point.
+The public landing page appears at `/`. Use `/admin` for sign-in only and
+`/super-admin` for sign-in or account creation. Admin modules use clean paths
+such as `/fmge-payments`. The Node.js server's Vite preview fallback serves the
+SPA entry point for direct visits and refreshes on these paths; `.htaccess` is
+only relevant when serving the build with Apache.

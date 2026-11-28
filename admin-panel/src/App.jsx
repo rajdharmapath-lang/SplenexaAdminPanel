@@ -24,9 +24,18 @@ export default function App() {
   const [logoutPending, setLogoutPending] = useState(false);
   const [authMode, setAuthMode] = useState('login');
   const [signupNotice, setSignupNotice] = useState('');
+  const currentPath = window.location.pathname.replace(/\/+$/, '') || '/';
+  const isLandingPage = currentPath === '/';
+  const allowAccountCreation = currentPath === '/super-admin';
+  const isSignupMode = allowAccountCreation && authMode === 'signup';
 
   useEffect(() => {
-    const onLocationChange = () => setRoute(routeFromLocation());
+    const onLocationChange = () => {
+      setRoute(routeFromLocation());
+      setAuthMode('login');
+      setLoginError('');
+      setSignupNotice('');
+    };
     const onHashChange = () => {
       normalizeLegacyHashRoute();
       onLocationChange();
@@ -46,7 +55,7 @@ export default function App() {
       setAuthenticated(false);
       setUser(null);
       setRoute(DEFAULT_ROUTE);
-      window.history.replaceState(null, '', '/');
+      window.history.replaceState(null, '', '/admin');
       setLoginError('Your session expired. Please sign in again.');
     };
     window.addEventListener(SESSION_EXPIRED_EVENT, onSessionExpired);
@@ -54,7 +63,7 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    if (!hasAdminSession(window)) {
+    if (isLandingPage || !hasAdminSession(window)) {
       return;
     }
     verifyAdminSession(window)
@@ -66,7 +75,7 @@ export default function App() {
         setAuthenticated(false);
         setUser(null);
         setRoute(DEFAULT_ROUTE);
-        window.history.replaceState(null, '', '/');
+        window.history.replaceState(null, '', '/admin');
         if (error.status !== 401) {
           setLoginError(error.message);
         }
@@ -83,7 +92,7 @@ export default function App() {
     const form = event.currentTarget;
     const formData = new FormData(form);
     try {
-      if (authMode === 'signup') {
+      if (isSignupMode) {
         const signupEmail = formData.get('email');
         const result = await signUpAdmin({
           firstName: formData.get('firstName'),
@@ -101,6 +110,8 @@ export default function App() {
         const signedInUser = await loginAdmin(formData.get('email'), formData.get('password'), window);
         setUser(signedInUser);
         setAuthenticated(true);
+        setRoute(DEFAULT_ROUTE);
+        window.history.replaceState(null, '', `/${DEFAULT_ROUTE}`);
         form.reset();
       }
     } catch (error) {
@@ -123,11 +134,21 @@ export default function App() {
       setAuthenticated(false);
       setUser(null);
       setRoute(DEFAULT_ROUTE);
-      window.history.replaceState(null, '', '/');
+      window.history.replaceState(null, '', '/admin');
       setAuthMode('login');
       setSignupNotice('');
       setLogoutPending(false);
     }
+  }
+
+  if (isLandingPage) {
+    return (
+      <iframe
+        title="Splenexa FMGE landing page"
+        src="/landing.html"
+        style={{ display: 'block', width: '100%', height: '100%', border: 0 }}
+      />
+    );
   }
 
   if (!authenticated) {
@@ -138,13 +159,13 @@ export default function App() {
       <main className="admin-login">
         <form className="admin-login-card" onSubmit={handleAuthSubmit}>
           <div className="admin-login-icon"><i className="bi bi-shield-lock-fill" aria-hidden="true"></i></div>
-          <h1>{authMode === 'signup' ? 'Create Account' : 'Sign In'}</h1>
+          <h1>{isSignupMode ? 'Create Account' : 'Sign In'}</h1>
           <p>
-            {authMode === 'signup'
+            {isSignupMode
               ? 'Create an account to access the Splenexa Admin Panel.'
               : 'Sign in to continue to the Splenexa Admin Panel.'}
           </p>
-          {authMode === 'signup' && (
+          {isSignupMode && (
             <>
               <label htmlFor="admin-first-name">First Name</label>
               <input id="admin-first-name" name="firstName" type="text" autoComplete="given-name" maxLength="80" required />
@@ -160,12 +181,12 @@ export default function App() {
               <input id="admin-mobile" name="mobile" type="tel" autoComplete="tel" maxLength="20" required />
             </>
           )}
-          <label htmlFor="admin-login-email">{authMode === 'signup' ? 'Email' : 'Email (Username)'}</label>
+          <label htmlFor="admin-login-email">{isSignupMode ? 'Email' : 'Email (Username)'}</label>
           <input
             id="admin-login-email"
             name="email"
             type="email"
-            autoComplete={authMode === 'signup' ? 'email' : 'username'}
+            autoComplete={isSignupMode ? 'email' : 'username'}
             maxLength="254"
             required
           />
@@ -174,12 +195,12 @@ export default function App() {
             id="admin-login-password"
             name="password"
             type="password"
-            autoComplete={authMode === 'signup' ? 'new-password' : 'current-password'}
-            minLength={authMode === 'signup' ? 12 : undefined}
+            autoComplete={isSignupMode ? 'new-password' : 'current-password'}
+            minLength={isSignupMode ? 12 : undefined}
             maxLength="128"
             required
           />
-          {authMode === 'signup' && (
+          {isSignupMode && (
             <p className="admin-login-hint">
               Use at least 12 characters. Email format is checked; no verification email is sent.
             </p>
@@ -189,20 +210,22 @@ export default function App() {
           )}
           {loginError && <p className="admin-login-error" role="alert">{loginError}</p>}
           <button type="submit" disabled={loginPending}>
-            {loginPending ? 'Please wait...' : authMode === 'signup' ? 'Sign Up' : 'Sign In'}
+            {loginPending ? 'Please wait...' : isSignupMode ? 'Sign Up' : 'Sign In'}
           </button>
-          <button
-            className="admin-login-switch"
-            type="button"
-            disabled={loginPending}
-            onClick={() => {
-              setAuthMode(authMode === 'signup' ? 'login' : 'signup');
-              setLoginError('');
-              setSignupNotice('');
-            }}
-          >
-            {authMode === 'signup' ? 'Back to Sign In' : 'Create Account'}
-          </button>
+          {allowAccountCreation && (
+            <button
+              className="admin-login-switch"
+              type="button"
+              disabled={loginPending}
+              onClick={() => {
+                setAuthMode(isSignupMode ? 'login' : 'signup');
+                setLoginError('');
+                setSignupNotice('');
+              }}
+            >
+              {isSignupMode ? 'Back to Sign In' : 'Create Account'}
+            </button>
+          )}
         </form>
       </main>
     );
