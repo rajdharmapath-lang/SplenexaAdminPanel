@@ -1,10 +1,11 @@
 // Behaviour carried over from the original HTML page.
 import { loadAdminCatalog, saveAdminCatalog } from '../../services/questionBankApi';
+import { navigate } from '../../routes';
 import { normalizeBootstrapIcon, normalizeIconValue, normalizeImageUrl } from '../../utils/iconValue';
 
 export default async function init(document, window) {
   const $ = id => document.getElementById(id);
-  const params = new URLSearchParams(window.location.hash.split('?')[1] || '');
+  const params = new URLSearchParams(window.location.search || window.location.hash.split('?')[1] || '');
   const productIdParam = params.get('productId') || '';
   const productParam = params.get('product') || '';
   const subjectParam = params.get('subject') || '';
@@ -429,7 +430,7 @@ export default async function init(document, window) {
       }
       const query = new URLSearchParams({ productId: currentProductId, product: product, subject: subjectName });
       if (topicName) query.set('topic', topicName);
-      window.location.hash = 'fmge-question-bank?' + query.toString();
+      navigate('fmge-question-bank?' + query.toString());
       return;
     }
 
@@ -477,15 +478,15 @@ export default async function init(document, window) {
     }
     const query = new URLSearchParams({ productId: currentProductId, product: product, subject: subjectName });
     if (topicName) query.set('topic', topicName);
-    window.location.hash = 'fmge-question-bank?' + query.toString();
+    navigate('fmge-question-bank?' + query.toString());
   };
 
   $('back-to-question-bank').onclick = () => {
     const currentProduct = productSelect.value || productName;
-    window.location.hash = 'fmge-question-bank?productId=' + encodeURIComponent(selectedProductId()) + '&product=' + encodeURIComponent(currentProduct);
+    navigate('fmge-question-bank?productId=' + encodeURIComponent(selectedProductId()) + '&product=' + encodeURIComponent(currentProduct));
   };
   $('cancel-create-test').onclick = () => {
     const currentProduct = productSelect.value || productName;
-    window.location.hash = 'fmge-question-bank?productId=' + encodeURIComponent(selectedProductId()) + '&product=' + encodeURIComponent(currentProduct);
+    navigate('fmge-question-bank?productId=' + encodeURIComponent(selectedProductId()) + '&product=' + encodeURIComponent(currentProduct));
   };
 }

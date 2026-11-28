@@ -29,6 +29,7 @@ function createListQuery(data) {
     select() { return this; },
     order() { return this; },
     eq() { return this; },
+    gt() { return this; },
     in() { return this; },
     then(resolve, reject) {
       return Promise.resolve({ data, error: null }).then(resolve, reject);
@@ -36,6 +37,30 @@ function createListQuery(data) {
   };
   return query;
 }
+
+test('active plan entitlements can be listed for the admin student directory', async () => {
+  const entitlements = [{
+    user_id: 'user-id',
+    plan_name: 'Foundation',
+    product_ids: ['product-1'],
+  }];
+  mock.method(supabase, 'getClient', () => ({
+    from(table) {
+      assert.equal(table, 'fee_plan_entitlements');
+      return createListQuery(entitlements);
+    },
+  }));
+
+  try {
+    assert.deepEqual(await repository.getActiveEntitlementsForAdmin(), [{
+      userId: 'user-id',
+      planName: 'Foundation',
+      productIds: ['product-1'],
+    }]);
+  } finally {
+    mock.restoreAll();
+  }
+});
 
 test('admin plan read maps separate database prices to actual and offer values', async () => {
   const client = {

@@ -32,7 +32,7 @@ function QuestionBankPage() {
                 <p>Create and manage products for your question bank.</p>
               </div>
               <div className="product-browser-actions">
-                <a className="back-list" href="#fmge-dashboard">
+                <a className="back-list" href="/fmge-dashboard">
                   <i className="bi bi-arrow-left"></i>
                   Back
                 </a>

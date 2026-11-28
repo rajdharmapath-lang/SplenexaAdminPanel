@@ -109,9 +109,9 @@ function DashboardPage() {
           </div>
 
           <div className="g row3">
-            <div className="card"><div className="ch"><h3>Payment Status</h3><a className="va" href="#fmge-payments">View All</a></div><DonutSummary {...PAYMENT_STATUS} /></div>
+            <div className="card"><div className="ch"><h3>Payment Status</h3><a className="va" href="/fmge-payments">View All</a></div><DonutSummary {...PAYMENT_STATUS} /></div>
             <div className="card tp">
-              <div className="ch"><h3>Top Selling Products</h3><a className="va" href="#fmge-payments">View All</a></div>
+              <div className="ch"><h3>Top Selling Products</h3><a className="va" href="/fmge-payments">View All</a></div>
               {TOP_PRODUCTS.map((p, i) => (
                 <div key={p.name}>
                   <span className={`rk${p.highlight ? ' y' : ''}`}>{i + 1}</span>{p.name}
@@ -119,7 +119,7 @@ function DashboardPage() {
                 </div>
               ))}
             </div>
-            <div className="card"><div className="ch"><h3>Application &amp; Product Overview</h3><a className="va" href="#fmge-question-bank">View All</a></div><DonutSummary {...PRODUCT_OVERVIEW} /></div>
+            <div className="card"><div className="ch"><h3>Application &amp; Product Overview</h3><a className="va" href="/fmge-question-bank">View All</a></div><DonutSummary {...PRODUCT_OVERVIEW} /></div>
           </div>
 
           <div className="g row4">

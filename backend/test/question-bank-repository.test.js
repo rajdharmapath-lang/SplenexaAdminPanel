@@ -146,7 +146,7 @@ test('catalog reads product rows and maps them to the Question Bank API shape', 
   }
 });
 
-test('app catalog exposes only entitled or free Question Bank content', async () => {
+test('app catalog exposes free products and only entitled paid Question Bank content', async () => {
   mock.method(repository, 'getCatalog', async () => ({
     products: [
       { id: 'paid-product', name: 'Paid product', accessType: 'Paid', isActive: true },

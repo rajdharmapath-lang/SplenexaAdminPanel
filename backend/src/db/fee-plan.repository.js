@@ -206,6 +206,20 @@ async function getUserEntitlements(userId) {
   }));
 }
 
+async function getActiveEntitlementsForAdmin() {
+  const rows = await unwrap(
+    supabase.getClient().from('fee_plan_entitlements')
+      .select('user_id, plan_name, product_ids')
+      .gt('valid_until', new Date().toISOString())
+      .order('valid_until', { ascending: false }),
+  );
+  return rows.map((row) => ({
+    userId: row.user_id,
+    planName: row.plan_name,
+    productIds: row.product_ids,
+  }));
+}
+
 module.exports = {
   getAdminPlans,
   getPublishedPlans,
@@ -216,4 +230,5 @@ module.exports = {
   getPaymentOrder,
   recordCapturedPayment,
   getUserEntitlements,
+  getActiveEntitlementsForAdmin,
 };

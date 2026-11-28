@@ -45,13 +45,27 @@ const ALIASES = {
 };
 const LABEL_TO_ROUTE = { ...Object.fromEntries(ROUTE_TABLE.map(([id, label]) => [label, id])), ...ALIASES };
 
-export const routeFromHash = () => {
-  const id = window.location.hash.slice(1).split('?')[0];
+export const routeFromLocation = () => {
+  const pathId = window.location.pathname.replace(/^\/+|\/+$/g, '');
+  const hashId = window.location.hash.slice(1).split('?')[0];
+  const id = PAGES[pathId] ? pathId : hashId;
   return PAGES[id] ? id : DEFAULT_ROUTE;
 };
+export const normalizeLegacyHashRoute = () => {
+  const [id, ...queryParts] = window.location.hash.slice(1).split('?');
+  if (!PAGES[id]) return;
+  const query = queryParts.join('?');
+  window.history.replaceState(null, '', `/${id}${query ? `?${query}` : ''}`);
+};
 export const navigate = (route) => {
-  const id = route.split('?')[0];
-  if (PAGES[id]) window.location.hash = route;
+  const [id, ...queryParts] = route.split('?');
+  if (!PAGES[id]) return;
+  const query = queryParts.join('?');
+  const url = `/${id}${query ? `?${query}` : ''}`;
+  if (`${window.location.pathname}${window.location.search}` !== url || window.location.hash) {
+    window.history.pushState(null, '', url);
+    window.dispatchEvent(new window.PopStateEvent('popstate'));
+  }
 };
 
 /** Same contract as the old iframe `parent.postMessage({ type: 'fmge-page', label })`. */

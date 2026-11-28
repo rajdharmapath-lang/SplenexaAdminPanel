@@ -1,7 +1,7 @@
 import { Suspense, useEffect, useState } from 'react';
 import Sidebar from './components/Sidebar';
 import { AdminSessionProvider } from './context/AdminSessionContext';
-import { PAGES, navigate, routeFromHash } from './routes';
+import { DEFAULT_ROUTE, PAGES, navigate, normalizeLegacyHashRoute, routeFromLocation } from './routes';
 import {
   clearAdminSession,
   getAdminUser,
@@ -15,7 +15,7 @@ import {
 const SESSION_EXPIRED_EVENT = 'splenexa-admin-session-expired';
 
 export default function App() {
-  const [route, setRoute] = useState(routeFromHash);
+  const [route, setRoute] = useState(routeFromLocation);
   const [authenticated, setAuthenticated] = useState(() => hasAdminSession(window));
   const [user, setUser] = useState(() => getAdminUser(window));
   const [authLoading, setAuthLoading] = useState(() => hasAdminSession(window));
@@ -26,9 +26,18 @@ export default function App() {
   const [signupNotice, setSignupNotice] = useState('');
 
   useEffect(() => {
-    const onHashChange = () => setRoute(routeFromHash());
+    const onLocationChange = () => setRoute(routeFromLocation());
+    const onHashChange = () => {
+      normalizeLegacyHashRoute();
+      onLocationChange();
+    };
+    normalizeLegacyHashRoute();
+    window.addEventListener('popstate', onLocationChange);
     window.addEventListener('hashchange', onHashChange);
-    return () => window.removeEventListener('hashchange', onHashChange);
+    return () => {
+      window.removeEventListener('popstate', onLocationChange);
+      window.removeEventListener('hashchange', onHashChange);
+    };
   }, []);
 
   useEffect(() => {
@@ -36,6 +45,8 @@ export default function App() {
       clearAdminSession(window);
       setAuthenticated(false);
       setUser(null);
+      setRoute(DEFAULT_ROUTE);
+      window.history.replaceState(null, '', '/');
       setLoginError('Your session expired. Please sign in again.');
     };
     window.addEventListener(SESSION_EXPIRED_EVENT, onSessionExpired);
@@ -54,6 +65,8 @@ export default function App() {
       .catch((error) => {
         setAuthenticated(false);
         setUser(null);
+        setRoute(DEFAULT_ROUTE);
+        window.history.replaceState(null, '', '/');
         if (error.status !== 401) {
           setLoginError(error.message);
         }
@@ -109,6 +122,8 @@ export default function App() {
       clearAdminSession(window);
       setAuthenticated(false);
       setUser(null);
+      setRoute(DEFAULT_ROUTE);
+      window.history.replaceState(null, '', '/');
       setAuthMode('login');
       setSignupNotice('');
       setLogoutPending(false);

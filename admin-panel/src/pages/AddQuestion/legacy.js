@@ -1,5 +1,6 @@
 // Behaviour carried over from the original HTML page.
 import { loadAdminCatalog, saveAdminCatalog } from '../../services/questionBankApi';
+import { navigate } from '../../routes';
 
 export default async function init(document, window) {
   try {
@@ -13,7 +14,7 @@ export default async function init(document, window) {
     return;
   }
 
-  const params = new URLSearchParams(window.location.hash.split('?')[1] || '');
+  const params = new URLSearchParams(window.location.search || window.location.hash.split('?')[1] || '');
   const editIndex = params.get('edit');
   const isEditing = /^\d+$/.test(editIndex || '');
   const readQuestion = () => {
@@ -79,7 +80,7 @@ export default async function init(document, window) {
   }
 
   document.getElementById('back-to-question-bank').onclick = () => {
-    window.location.hash = 'fmge-question-bank';
+    navigate('fmge-question-bank');
   };
 
   const editorFonts = [
@@ -484,7 +485,7 @@ export default async function init(document, window) {
     }
     const query = new URLSearchParams({ productId, product: currentProduct, subject: currentSubject });
     if (currentTopic) query.set('topic', currentTopic);
-    window.location.hash = `fmge-question-bank?${query.toString()}`;
+    navigate(`fmge-question-bank?${query.toString()}`);
   }
   document.getElementById('save-question-draft').onclick = () => saveQuestion('Draft');
   document.getElementById('publish-question').onclick = () => saveQuestion('Active');

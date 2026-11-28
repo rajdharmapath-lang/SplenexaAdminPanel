@@ -5,6 +5,7 @@ const cors = require('cors');
 const express = require('express');
 const authRoutes = require('./src/routes/auth.routes');
 const userRoutes = require('./src/routes/user.routes');
+const appUserRoutes = require('./src/routes/app-user.routes');
 const questionBankRoutes = require('./src/routes/question-bank.routes');
 const feePlanRoutes = require('./src/routes/fee-plan.routes');
 const paymentRoutes = require('./src/routes/payment.routes');
@@ -23,6 +24,7 @@ app.get('/', (_req, res) => res.json({ ok: true, service: 'splenexa-backend' }))
 app.get('/health', (_req, res) => res.json({ ok: true }));
 app.use('/api/auth', authRoutes);
 app.use('/api/user', userRoutes);
+app.use('/api/app-users', appUserRoutes);
 
 app.use((error, _req, res, _next) => {
   if (error.type === 'entity.too.large') {

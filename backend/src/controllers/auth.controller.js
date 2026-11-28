@@ -109,18 +109,19 @@ async function verifyOtp(req, res, next) {
     const normalizedDialCode = dialCode.replace(/\D/g, '');
     const normalizedPhone = phone.replace(/\D/g, '');
     const account = await userRepository.getOrCreateUserByPhone(normalizedDialCode, normalizedPhone);
-    const token = issueSessionToken(account.user.id);
+    const user = await userRepository.recordLogin(account.user.id);
+    const token = issueSessionToken(user.id);
     return res.json({
       token,
-      user: account.user,
+      user,
       isNewUser: account.created,
     });
   } catch (error) {
     if (error.code === 'SUPABASE_NOT_CONFIGURED' || error.code === 'JWT_NOT_CONFIGURED') {
       return res.status(503).json({ message: error.message });
     }
-    console.error('Account creation after OTP failed:', error.code || error.message);
-    return res.status(503).json({ message: 'Could not create your account.' });
+    console.error('Account sign-in after OTP failed:', error.code || error.message);
+    return res.status(503).json({ message: 'Could not load or update your account.' });
   }
 }
 

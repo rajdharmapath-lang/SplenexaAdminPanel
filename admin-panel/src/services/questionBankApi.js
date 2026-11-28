@@ -2,6 +2,7 @@ const ADMIN_SESSION_KEY = 'splenexa-question-bank-admin-session';
 const ADMIN_USER_KEY = 'splenexa-admin-user';
 const ADMIN_TESTS_KEY = 'fmge-question-bank-tests';
 const ADMIN_ENDPOINT = '/api/question-bank/admin';
+const APP_USERS_ADMIN_ENDPOINT = '/api/app-users/admin';
 const REQUEST_TIMEOUT_MS = 15000;
 const SESSION_EXPIRED_EVENT = 'splenexa-admin-session-expired';
 
@@ -174,6 +175,14 @@ export async function loadAdminCatalog(window) {
   }
   catalog.tests = Array.isArray(catalog.tests) ? catalog.tests : [];
   return catalog;
+}
+
+export async function loadAdminAppUsers(window) {
+  const response = await request(APP_USERS_ADMIN_ENDPOINT, { window });
+  if (!response || !Array.isArray(response.users)) {
+    throw new Error('The App Users API returned invalid user data.');
+  }
+  return response.users;
 }
 
 let saveQueue = Promise.resolve();

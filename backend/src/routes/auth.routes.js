@@ -4,7 +4,7 @@ const authController = require('../controllers/auth.controller');
 
 const router = express.Router();
 const otpRateLimit = rateLimit({
-  windowMs: 15 * 60 * 1000,
+  windowMs: 60 * 1000,
   limit: 5,
   standardHeaders: 'draft-7',
   legacyHeaders: false,

@@ -26,7 +26,7 @@ function CreateNotificationPage() {
             </div>
           </header>
           <div className="content">
-            <a href="#" className="back">
+            <a href="/fmge-notifications" className="back">
               <i className="bi bi-arrow-left"></i>
               Back to Notifications
             </a>

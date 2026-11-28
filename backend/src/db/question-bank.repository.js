@@ -66,6 +66,20 @@ async function getCatalog() {
   };
 }
 
+async function getProductNames() {
+  const result = await supabase
+    .getClient()
+    .from('question_bank_products')
+    .select('product_id, name')
+    .order('display_order', { ascending: true })
+    .order('created_at', { ascending: true });
+  if (result.error) throw result.error;
+  return (result.data || []).map((product) => ({
+    id: product.product_id,
+    name: product.name,
+  }));
+}
+
 async function saveCatalog(catalog) {
   const parameters = {
     p_products: catalog.products,
@@ -78,4 +92,4 @@ async function saveCatalog(catalog) {
   return data;
 }
 
-module.exports = { getCatalog, saveCatalog };
+module.exports = { getCatalog, getProductNames, saveCatalog };

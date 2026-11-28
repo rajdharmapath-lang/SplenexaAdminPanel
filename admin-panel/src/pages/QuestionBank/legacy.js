@@ -1,5 +1,6 @@
 // Runs once after the JSX markup mounts.
 import { loadAdminCatalog, saveAdminCatalog } from '../../services/questionBankApi';
+import { navigate } from '../../routes';
 import { normalizeBootstrapIcon, normalizeIconValue, normalizeImageUrl } from '../../utils/iconValue';
 
 export default async function init(document, window) {
@@ -201,7 +202,7 @@ export default async function init(document, window) {
   createTestFromProduct.addEventListener('click', function () {
     const product = activeProduct();
     if (!product) return;
-    window.location.hash = 'fmge-create-test?product=' + encodeURIComponent(product.name) + '&productId=' + encodeURIComponent(product.id);
+    navigate('fmge-create-test?product=' + encodeURIComponent(product.name) + '&productId=' + encodeURIComponent(product.id));
   });
 
   function showProducts() {
@@ -415,7 +416,7 @@ export default async function init(document, window) {
     renderSubjects();
   }
 
-  const initialParams = new URLSearchParams(window.location.hash.split('?')[1] || '');
+  const initialParams = new URLSearchParams(window.location.search || window.location.hash.split('?')[1] || '');
   const initialSubject = initialParams.get('subject');
   const initialTopic = initialParams.get('topic');
   const initialProductId = initialParams.get('productId');
@@ -603,7 +604,7 @@ export default async function init(document, window) {
     const topicSubjectIndex = subjectView.dataset.subjectIndex;
     if (topicSubjectIndex !== undefined) {
       const subject = subjects[Number(topicSubjectIndex)];
-      window.location.hash = 'fmge-create-test?product=' + encodeURIComponent(subjectView.dataset.product || '') + '&productId=' + encodeURIComponent(currentProductId || '') + '&subject=' + encodeURIComponent(subject.name) + '&mode=topic';
+      navigate('fmge-create-test?product=' + encodeURIComponent(subjectView.dataset.product || '') + '&productId=' + encodeURIComponent(currentProductId || '') + '&subject=' + encodeURIComponent(subject.name) + '&mode=topic');
       return;
     }
     const dialog = document.getElementById('create-subject-dialog');
@@ -617,7 +618,7 @@ export default async function init(document, window) {
   });
   topicCreateQuestion.addEventListener('click', function () {
     const subject = subjects[Number(subjectView.dataset.subjectIndex)];
-    window.location.hash = 'fmge-add-question?product=' + encodeURIComponent(subjectView.dataset.product || '') + '&productId=' + encodeURIComponent(currentProductId || '') + '&subject=' + encodeURIComponent(subject.name) + '&topic=' + encodeURIComponent(subjectView.dataset.topic || '');
+    navigate('fmge-add-question?product=' + encodeURIComponent(subjectView.dataset.product || '') + '&productId=' + encodeURIComponent(currentProductId || '') + '&subject=' + encodeURIComponent(subject.name) + '&topic=' + encodeURIComponent(subjectView.dataset.topic || ''));
   });
   document.getElementById('cancel-create-subject').addEventListener('click', function () {
     closeNameDialog();
@@ -780,7 +781,7 @@ export default async function init(document, window) {
       document.getElementById('view-question-dialog').classList.add('on');
     } else if (editQuestion) {
       const subject = subjects[Number(subjectView.dataset.subjectIndex)];
-      window.location.hash = 'fmge-add-question?product=' + encodeURIComponent(subjectView.dataset.product || '') + '&productId=' + encodeURIComponent(currentProductId || '') + '&subject=' + encodeURIComponent(subject.name) + '&topic=' + encodeURIComponent(subjectView.dataset.topic || '') + '&edit=' + questionIndex;
+      navigate('fmge-add-question?product=' + encodeURIComponent(subjectView.dataset.product || '') + '&productId=' + encodeURIComponent(currentProductId || '') + '&subject=' + encodeURIComponent(subject.name) + '&topic=' + encodeURIComponent(subjectView.dataset.topic || '') + '&edit=' + questionIndex);
     } else if (deleteQuestion && window.confirm('Delete this question?')) {
       questions.splice(questionIndex, 1);
       persistCatalog();
